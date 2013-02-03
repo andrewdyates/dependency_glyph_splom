@@ -8,6 +8,8 @@ report/*
 *.RData
 *.ROut
 *.Rout
+.\#*
+\#*
 
 # C extensions
 *.so
