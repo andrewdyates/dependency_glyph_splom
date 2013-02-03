@@ -11,6 +11,10 @@ report/*
 .\#*
 \#*
 
+# Ignore images generated during testing.
+*.png
+*.pdf
+
 # C extensions
 *.so
 

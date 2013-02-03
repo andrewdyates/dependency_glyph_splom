@@ -106,6 +106,13 @@ heatmap.2(as.matrix(DCOR),
   key=TRUE, symkey=FALSE, trace="none",
   Rowv=Rhclust, Colv=Chclust
 );
+
+# plot corresponding glyphs
+rowInd <- order.dendrogram(Rhclust)
+colInd <- order.dendrogram(Chclust)
+CLS.dcor.ord <- CLS[rowInd, colInd]
+draw.glyphs(CLS.dcor.ord)
+draw.glyphs(expand.cls(CLS.dcor.ord), grid=2)
 # ------------------------------
 
 
@@ -155,7 +162,6 @@ expand.cls <- function(CLS, pad=FALSE) {
   }
   G
 }
-
 G <- expand.cls(CLS)
 Gb <- expand.cls(CLS, pad=TRUE)
 
@@ -164,7 +170,9 @@ Gb <- expand.cls(CLS, pad=TRUE)
 ##   0: do not draw grid
 ##   1: draw grid every square
 ##   2: draw grid every other square (for 2x2 glyphs)
-draw.glyphs <- function(G, col=GLYPH.COLS, draw.grid=0, grid.col=GRID.COL) {
+
+## par(mar = rep(0, 4)) # set plot margins to 0 before drawing
+draw.glyphs <- function(G, col=GLYPH.COLS, grid=0, grid.col=GRID.COL, useRaster=FALSE) {
   ## "Lower edge" of color bins. Bin is [i,i+1) of `breaks`, indexed from 1.
   ##    "0" goes into the first bin: [-0.5, 0.5)
   ##    "1" goes into second bin:    [0.5, 1.5)
@@ -177,17 +185,15 @@ draw.glyphs <- function(G, col=GLYPH.COLS, draw.grid=0, grid.col=GRID.COL) {
   Img <- t(G)[,seq(nrow(G),1,-1)]
   w<-ncol(G); h<-nrow(G)
   image(1:w, 1:h, Img, col=col, breaks=breaks,
-    axes=FALSE, xlab="", ylab="")
-  if (draw.grid == 1) {
-    for(i in 1:w)
-      abline(v=i-0.5, untf=FALSE, col=grid.col)
-    for(j in 1:h)
-      abline(h=j-0.5, untf=FALSE, col=grid.col)
-  } else if (draw.grid == 2) {
-    for(i in 1:(w/2))
-      abline(v=i*2-0.5, untf=FALSE, col=grid.col)
-    for(j in 1:(h/2))
-      abline(h=j*2-0.5, untf=FALSE, col=grid.col)
+    axes=FALSE, xlab="", ylab="", useRaster=useRaster,
+        mar = rep(0, 4))
+  ## Add vector grid.
+  if (grid != 0) {
+    os <- grid-0.5
+    for(i in 0:(w/grid)+1)
+      abline(v=i*grid-os, untf=FALSE, col=grid.col)
+    for(j in 0:(h/grid)+1)
+      abline(h=j*grid-os, untf=FALSE, col=grid.col)
   }
 }
 
@@ -209,6 +215,33 @@ Chclust <- reorder(Chclust, Colv)
 rowInd <- order.dendrogram(Rhclust)
 colInd <- order.dendrogram(Chclust)
 
-CLS <- CLS[rowInd, colInd]
-draw.glyphs(CLS)
-draw.glyphs(expand.cls(CLS))
+CLS.ord <- CLS[rowInd, colInd]
+draw.glyphs(CLS.ord)
+draw.glyphs(expand.cls(CLS.ord))
+draw.glyphs(CLS.ord, grid=1)
+draw.glyphs(expand.cls(CLS.ord), grid=2)
+
+
+## Pixel-perfect plotting
+plot.pix <- function(G, fname="cls.px.plot.png", scale=1, ...) {
+  fname <- paste0(sub("\\.png$", "", fname),".png")
+  png(fname, width=ncol(G)*scale, height=nrow(G)*scale, units="px", bg="white")
+  par(mar = rep(0, 4)) # set plot margins to 0 before drawing
+  draw.glyphs(G, useRaster=TRUE, grid=grid, ...)
+  dev.off()
+}
+
+## Scaled vector plotting. If height is NULL, scale proportionately with width.
+plot.vtr <- function(G, width=7, height=NULL, fname="cls.plot.pdf", ...) {
+  fname <- paste0(sub("\\.pdf$", "", fname),".pdf")
+  if(is.null(height)) {
+    scale <- width / ncol(G)
+    height <- nrow(G)*scale
+  }
+  pdf(fname, width=width, height=height)
+  par(mar = rep(0, 4)) # set plot margins to 0 before drawing
+  draw.glyphs(G, ...)
+  dev.off()
+}
+# EXAMPLE:
+# plot.vtr(expand.cls(CLS.ord), grid=2, grid.col="white")
