@@ -4,6 +4,10 @@
 .DS*
 dump/*
 report/*
+*.Rdata
+*.RData
+*.ROut
+*.Rout
 
 # C extensions
 *.so
