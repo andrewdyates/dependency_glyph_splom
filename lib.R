@@ -135,11 +135,11 @@ expand.cls <- function(CLS, pad=FALSE) {
 ##   1: draw grid every square
 ##   2: draw grid every other square (for 2x2 glyphs)
 draw.glyphs <- function(G, col=GLYPH.COLS, grid=0, grid.col=GRID.COL, useRaster=FALSE, lwd=1) {
-  ## "Lower edge" of color bins. Bin is [i,i+1) of `breaks`, indexed from 1.
-  ##    "0" goes into the first bin: [-0.5, 0.5)
-  ##    "1" goes into second bin:    [0.5, 1.5)
+  ## "Lower edge" of color bins. Bin is (i,i+1] of `breaks`, indexed from 1.
+  ##    "0" goes into the first bin: (-0.5, 0.5]
+  ##    "1" goes into second bin:    (0.5, 1.5]
   ##    ...
-  ##    "7" goes into ninth bin (eight bins, plus lowest bound)  [7.5, 8.5)
+  ##    "7" goes into ninth bin (eight bins, plus lowest bound)  (7.5, 8.5]
   breaks <- 0:length(GLYPH.COLS)-0.5
   ## Convert matrix into "image" so that top left corners are aligned
   ##   `image` plots transpose of matrix

@@ -17,21 +17,36 @@ DCOR.ord <- DCOR[rowInd, colInd]
 # OK, can we scale the intensities?
 # make n=10 levels per color, interpolate from white
 
-
+GLYPH.COLS.MAX <- c("#ffffff", "#00b371", "#0089d9", "#3424b3", "#000000", "#bf0063", "#bf000d", "#f04400", "#ffffff")
 GLYPH.COLS <- c("#ffffff", "#40a185", "#2688bf", "#5b51a5", "#000000", "#a00d42", "#d7424c", "#eb6532", "#ffffff")
+GLYPH.COLS.MAX.2 <- c("#ffffff", "#00b271", "#0089d9", "#3424b3", "#000000", "#a3033c", "#d82a36", "#eb5218", "#ffffff")
 
 
 # Row is level (1 is white, N is color); Col is glyph in GLYPH.COLS order
 
 
-N <- 10
+# There are N equally-spaced tints from MIN to MAX.
+#   tints do not include white but do including the untinted color.
+#   values under MIN are assigned the background color (white)
+#   The 1st tint histogram bin (over MIN) is a tint; it is not white.
+#   The last histogram bin is to MAX. Values over MAX are in this bin.
+# values in the first bin are 
+N <- 15 # number of tints including the color itself. Must be >= 1.
 ## First interpolation level is white for values below MIN.
 ## Thus there are N-1 tints, plus white, for each range.
 ## We assign values of at least MAX the untinted color.
-COLOR.M <- sapply(GLYPH.COLS, function(color) colorRampPalette(c("#ffffff", color))(N))
+## --------------------
+## COLOR.V assigns the 1st N elements to GLYPH.COLS[1] tints,
+##   the 2nd N elements to GLYPH.COLS[2] tints... etc.
+##   thus, each color "column" gets N+1 entries: white, 9 tints, and the color
+#COLOR.M <- sapply(GLYPH.COLS, function(color) colorRampPalette(c("#ffffff", color))(N+1))
+#COLOR.M <- sapply(GLYPH.COLS.MAX, function(color) colorRampPalette(c("#ffffff", color))(N+1))
+COLOR.M <- sapply(GLYPH.COLS.MAX.2, function(color) colorRampPalette(c("#ffffff", color))(N+1))
+# may adjust this to improve saturation
+COLOR.V <- c(COLOR.M)
 
 MIN <- 0.08
-MAX <- 0.8
+MAX <- max(DCOR) # 0.792174
 
 # Mark class ordinals using a decimal (less than 1). Order by increasing dep strength.
 
@@ -41,32 +56,40 @@ MAX <- 0.8
 ##    ...
 ##    "7" goes into ninth bin (eight bins, plus lowest bound)  [7.5, 8.5)
 
-th <- (MAX-MIN)/(N-2)   ## bin for above and below bin threshold
-breaks <- sapply(0:(N-2), function(i) MIN+i*th)
-breaks <- c(0, breaks, 1)
+th <- (MAX-MIN)/N   ## bin for above and below bin threshold
+# do not add a break at MAX; extend that bin to end at the global max (1)
+breaks <- c(0, sapply(0:(N-1), function(i) MIN+i*th), 1)
 
 ## Select greatest break less than x
-f <- function(x) min(tail(breaks[breaks<=0.7],1), MAX)
+
+offsets <- sapply(1:(N+1), function(i) (breaks[i]+breaks[i+1])/2)
+offsets <- c(offsets, tail(offsets,1)) ## offset beyond max value is still max value
+## Select the greatest offset less than x.
+f <- function(x) offsets[tail(which(breaks<=x),1)]
+
 ## Generate offset fraction from DCOR histogram.
-OFFSET <- apply(DCOR, c(1,2), f)
+OFFSET <- apply(DCOR.ord, c(1,2), f)
 
 
-# CLS+OFFSET ...
+G <- CLS.ord+OFFSET
+Img <- t(G)[,seq(nrow(G),1,-1)]
+# 
 # convert COLOR.M to vector
 # draw.glyphs(CLS.ord)
 ## ------------------------------
-# generate color breaks from 0:7
-#
-# how to get concatenated matrix?
-# HOW TO RESHAPE MATRIX TO A VECTOR?
-B <- sapply(0:7, function(x) rep(x,N)+breaks[1:N])
+# generate color level breaks from 0:7 with decimal histograms
 
-color.breaks 
+N.BREAKS <- c(sapply(0:8, function(x) rep(x,N+1)+breaks[1:(N+1)]), 9)
+
 w<-ncol(G); h<-nrow(G)
-image(1:w, 1:h, Img, col=col, breaks=breaks,
-  axes=FALSE, xlab="", ylab="", useRaster=useRaster)
+image(1:w, 1:h, Img, col=COLOR.V, breaks=N.BREAKS, axes=FALSE, xlab="", ylab="", useRaster=FALSE)
 
-Img <- t(G)[,seq(nrow(G),1,-1)]
+## inspect colors (strong purple where it should be black?)
+## top class scatterplots
+## increase saturation
+## use DCOR in clustering
+## convert glyphs from scaled GLYPH matrix
 
 
-
+## CHECK
+## G[3,24]

@@ -11,6 +11,8 @@ CLS <- order.cls(BC0.cls)
 draw.glyphs(CLS)
 draw.glyphs(CLS, grid=1)
 
+CLS.big <- order.cls(BCBig.cls)
+
 # Test glyph expansion and plotting
 GLY <- expand.cls(CLS)
 draw.glyphs(GLY)
@@ -23,6 +25,11 @@ draw.glyphs(PAD, grid=3)
 
 # Test pixel plotting convenience function.
 # single pixel plot
+
+
+
+plot.pix(CLS.big, scale=1, fname="cls.big")
+
 plot.pix(CLS, scale=10, fname="cls.test.scale10")
 plot.pix(CLS, scale=10, fname="cls.test.scale10.grid1", grid=1)
 plot.pix(CLS, scale=1, fname="cls.test.scale1.pdf")
