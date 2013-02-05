@@ -20,7 +20,7 @@ DCOR.ord <- DCOR[rowInd, colInd]
 GLYPH.COLS.MAX <- c("#ffffff", "#00b371", "#0089d9", "#3424b3", "#000000", "#bf0063", "#bf000d", "#f04400", "#ffffff")
 GLYPH.COLS <- c("#ffffff", "#40a185", "#2688bf", "#5b51a5", "#000000", "#a00d42", "#d7424c", "#eb6532", "#ffffff")
 GLYPH.COLS.MAX.2 <- c("#ffffff", "#00b271", "#0089d9", "#3424b3", "#000000", "#a3033c", "#d82a36", "#eb5218", "#ffffff")
-
+#9a0049 ## more blue
 
 # Row is level (1 is white, N is color); Col is glyph in GLYPH.COLS order
 
@@ -91,5 +91,71 @@ image(1:w, 1:h, Img, col=COLOR.V, breaks=N.BREAKS, axes=FALSE, xlab="", ylab="",
 ## convert glyphs from scaled GLYPH matrix
 
 
-## CHECK
-## G[3,24]
+## ==============================
+## Cluster on offset class enumerations
+## ==============================
+R <- get.cls.order(G)
+rowInd <- order.dendrogram(R$Rhclust)
+colInd <- order.dendrogram(R$Chclust)
+G.ord <- G[rowInd, colInd]
+G.CLS.ord <- CLS.ord[rowInd, colInd]
+G.DCOR.ord <- DCOR.ord[rowInd, colInd]
+
+Img2 <- t(G.ord)[,seq(nrow(G.ord),1,-1)]
+image(1:w, 1:h, Img2, col=COLOR.V, breaks=N.BREAKS, axes=FALSE, xlab="", ylab="", useRaster=FALSE)
+
+## ==============================
+## Cluster on class enumerations, sort by dCOR
+## ==============================
+CLS  <- BC0.cls
+DCOR <- BC0.dcor
+
+D.cls.r <- dist(CLS)
+D.cls.c <- dist(t(CLS))
+Rowv <- rowMeans(DCOR, na.rm = TRUE)
+Colv <- colMeans(DCOR, na.rm = TRUE)
+R$Rhclust <- as.dendrogram(hclust(D.cls.r, method="average"))
+R$Rhclust <- reorder(R$Rhclust, Rowv)
+R$Chclust <- as.dendrogram(hclust(D.cls.c, method="average"))
+R$Chclust <- reorder(R$Chclust, Colv)
+
+rowInd <- order.dendrogram(R$Rhclust)
+colInd <- order.dendrogram(R$Chclust)
+CLS.ord <- CLS[rowInd, colInd]
+DCOR.ord <- DCOR[rowInd, colInd]
+
+OFFSET <- apply(DCOR.ord, c(1,2), f)
+G <- CLS.ord+OFFSET
+Img <- t(G)[,seq(nrow(G),1,-1)]
+image(1:w, 1:h, Img, col=COLOR.V, breaks=N.BREAKS, axes=FALSE, xlab="", ylab="", useRaster=FALSE)
+
+
+## ==============================
+## Cluster on class enumerations w/ dCOR dist
+##   sort by dCOR
+## ==============================
+CLS  <- BC0.cls
+DCOR <- BC0.dcor
+DCOR.W <- 2 # best by rough experiment
+
+D.cls.r <- dist(CLS)
+D.cls.c <- dist(t(CLS))
+D.DCOR.r <- as.dist(1-cor(t(DCOR), method="pearson")) + dist(DCOR)
+D.DCOR.c <- as.dist(1-cor(DCOR, method="pearson")) + dist(t(DCOR))
+
+Rowv <- rowMeans(DCOR, na.rm = TRUE)
+Colv <- colMeans(DCOR, na.rm = TRUE)
+Rhclust <- as.dendrogram(hclust(D.DCOR.r*DCOR.W+D.cls.r, method="average"))
+Rhclust <- reorder(Rhclust, Rowv)
+Chclust <- as.dendrogram(hclust(D.DCOR.c*DCOR.W+D.cls.c, method="average"))
+Chclust <- reorder(Chclust, Colv)
+
+rowInd <- order.dendrogram(Rhclust)
+colInd <- order.dendrogram(Chclust)
+CLS.ord <- CLS[rowInd, colInd]
+DCOR.ord <- DCOR[rowInd, colInd]
+
+OFFSET <- apply(DCOR.ord, c(1,2), f)
+G <- CLS.ord+OFFSET
+Img <- t(G)[,seq(nrow(G),1,-1)]
+image(1:w, 1:h, Img, col=COLOR.V, breaks=N.BREAKS, axes=FALSE, xlab="", ylab="", useRaster=FALSE)
