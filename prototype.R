@@ -16,8 +16,8 @@ BCBig.dcor <- as.matrix(read.table("data/bcbig.dcor.tab.gz", header=TRUE, sep=" 
 GLYPH.COLS <- c("#ffffff", "#40a185", "#2688bf", "#5b51a5", "#000000", "#a00d42", "#d7424c", "#eb6532", "#ffffff")
 GRID.COL <-  "#cdd7e6"
 
-BC0.cls <- renumerate(BC0.cls)
-BCBig.cls <- renumerate(BCBig.cls)
+BC0.cls <- renumerate.fix(BC0.cls)
+BCBig.cls <- renumerate.fix(BCBig.cls)
 save(BC0.cls, BC0.dcor, BCBig.cls, BCBig.dcor, file="BC.RData")
 # load("BC.RData")
 

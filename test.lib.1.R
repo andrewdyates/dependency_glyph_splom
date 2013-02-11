@@ -12,6 +12,7 @@ draw.glyphs(CLS)
 draw.glyphs(CLS, grid=1)
 
 CLS.big <- order.cls(BCBig.cls)
+draw.glyphs(CLS.big)
 
 # Test glyph expansion and plotting
 GLY <- expand.cls(CLS)

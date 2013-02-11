@@ -17,9 +17,9 @@ DCOR.ord <- DCOR[rowInd, colInd]
 # OK, can we scale the intensities?
 # make n=10 levels per color, interpolate from white
 
-GLYPH.COLS.MAX <- c("#ffffff", "#00b371", "#0089d9", "#3424b3", "#000000", "#bf0063", "#bf000d", "#f04400", "#ffffff")
+#GLYPH.COLS.MAX.2 <- c("#ffffff", "#00b371", "#0089d9", "#3424b3", "#000000", "#bf0063", "#bf000d", "#f04400", "#ffffff")
 GLYPH.COLS <- c("#ffffff", "#40a185", "#2688bf", "#5b51a5", "#000000", "#a00d42", "#d7424c", "#eb6532", "#ffffff")
-GLYPH.COLS.MAX.2 <- c("#ffffff", "#00b271", "#0089d9", "#3424b3", "#000000", "#a3033c", "#d82a36", "#eb5218", "#ffffff")
+GLYPH.COLS.MAX <- c("#ffffff", "#00b271", "#0089d9", "#3424b3", "#000000", "#a3033c", "#d82a36", "#eb5218", "#ffffff")
 #9a0049 ## more blue
 
 # Row is level (1 is white, N is color); Col is glyph in GLYPH.COLS order
@@ -40,8 +40,7 @@ N <- 15 # number of tints including the color itself. Must be >= 1.
 ##   the 2nd N elements to GLYPH.COLS[2] tints... etc.
 ##   thus, each color "column" gets N+1 entries: white, 9 tints, and the color
 #COLOR.M <- sapply(GLYPH.COLS, function(color) colorRampPalette(c("#ffffff", color))(N+1))
-#COLOR.M <- sapply(GLYPH.COLS.MAX, function(color) colorRampPalette(c("#ffffff", color))(N+1))
-COLOR.M <- sapply(GLYPH.COLS.MAX.2, function(color) colorRampPalette(c("#ffffff", color))(N+1))
+COLOR.M <- sapply(GLYPH.COLS.MAX, function(color) colorRampPalette(c("#ffffff", color))(N+1))
 # may adjust this to improve saturation
 COLOR.V <- c(COLOR.M)
 
@@ -84,11 +83,6 @@ N.BREAKS <- c(sapply(0:8, function(x) rep(x,N+1)+breaks[1:(N+1)]), 9)
 w<-ncol(G); h<-nrow(G)
 image(1:w, 1:h, Img, col=COLOR.V, breaks=N.BREAKS, axes=FALSE, xlab="", ylab="", useRaster=FALSE)
 
-## inspect colors (strong purple where it should be black?)
-## top class scatterplots
-## increase saturation
-## use DCOR in clustering
-## convert glyphs from scaled GLYPH matrix
 
 
 ## ==============================
@@ -159,3 +153,84 @@ OFFSET <- apply(DCOR.ord, c(1,2), f)
 G <- CLS.ord+OFFSET
 Img <- t(G)[,seq(nrow(G),1,-1)]
 image(1:w, 1:h, Img, col=COLOR.V, breaks=N.BREAKS, axes=FALSE, xlab="", ylab="", useRaster=FALSE)
+
+
+### Get list of dependencies by dependency category
+### ------------------------------
+# Load mRNA
+methyl <- as.matrix(read.table("data/Methyl_correct_aligned.tab.gz", header=TRUE, sep="\t", row.names=1))
+mRNA <- as.matrix(read.table("data/mRNA_correct_aligned.tab.gz", header=TRUE, sep="\t", row.names=1))
+save(methyl, mRNA, file="data/methyl_mrna.RData")
+# load("data/methyl_mrna.RData")
+
+#CLS  <- BC0.cls
+#DCOR <- BC0.dcor
+CLS  <- BCBig.cls
+DCOR <- BCBig.dcor
+
+# Get methyl and mRNA rows included in CLS and DCOR aligned to rows and columns
+#   rows: CpG
+#   cols: mRNA
+ROW.VARS = methyl[which(rownames(methyl) %in% rownames(CLS)),]
+COL.VARS = mRNA[which(rownames(mRNA) %in% colnames(CLS)),]
+
+# Plot distribution of class and dCOR
+# ------------------------------
+boxplot(split(DCOR, CLS), col=GLYPH.COLS[2:8])
+barplot(sapply(split(DCOR, CLS),length), col=GLYPH.COLS[2:8])
+hist(DCOR)
+
+
+
+
+DCOR[CLS == 4]
+qq <- which(CLS == 4, arr.ind=T)
+ww <- order(DCOR[qq], decreasing=TRUE)
+## qq[ww[1],]
+## row col 
+##  76  16
+DCOR[qq[ww[1],]]
+
+DCOR[rbind(qq[ww[1],])]
+## !!NOTE: DCOR values in Python are energy dCOR values squared.
+
+# color dots by tissue
+col <- rep("black", length(X)) # FCTX
+col[grep("TCTX", names(X))] <- "red"
+col[grep("CRBLM", names(X))] <- "blue"
+col[grep("PONS", names(X))] <- "green"
+
+test <- function(n) {
+for(i in 1:n) {
+  x <- qq[ww[i],][1]
+  y <- qq[ww[i],][2]
+  X <- ROW.VARS[x,]
+  Y <- COL.VARS[y,]
+  png(paste0("nonlin",i,".",x,".",y,".png"))
+  plot(X,Y, col=col)
+  dev.off()
+  print(paste0(cor(X,Y), ": ", dcor(X,Y)))
+}
+}
+
+
+
+test2 <- function(n) {
+for(cls in c(1,2,3,4,5,6,7)) {
+  cls.idx <- which(CLS == cls, arr.ind=T)
+  dcor.rank <- order(DCOR[cls.idx], decreasing=TRUE)
+  print(cls)
+  for(i in 1:n) {
+    x <- cls.idx[dcor.rank[i],][1]
+    y <- cls.idx[dcor.rank[i],][2]
+    X <- ROW.VARS[x,]
+    Y <- COL.VARS[y,]
+    pcc <- cor(X,Y)
+    dcc <- dcor(X,Y)
+    png(paste0("cls.",cls,".",i,".",x,".",y,"pcc",pcc,"dcor",dcc,".png"))
+    plot(X,Y, col=col)
+    dev.off()
+    print(paste0(pcc, ": ", dcc))
+  }
+}
+}

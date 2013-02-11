@@ -1,8 +1,10 @@
 library("RColorBrewer")
 library("gplots")
 
-GLYPH.COLS <- c("#ffffff", "#40a185", "#2688bf", "#5b51a5", "#000000", "#a00d42", "#d7424c", "#eb6532", "#ffffff")
 GRID.COL <-  "#ffffff"
+CLS.ENUM <- list("0"="NA", "1"="HIH", "2"="PC", "3"="LIL", "4"="UNL", "5"="HIL", "6"="NC", "7"="LIH", "8"="PAD")
+GLYPH.COLS <- c("#ffffff", "#40a185", "#2688bf", "#5b51a5", "#000000", "#a00d42", "#d7424c", "#eb6532", "#ffffff")
+GLYPH.COLS.MAX <- c("#ffffff", "#00b271", "#0089d9", "#3424b3", "#000000", "#a3033c", "#d82a36", "#eb5218", "#ffffff")
 # ---------------
 # Re-enumerate glyph symbols to put ND in the center, 0 as bg
 # Input enumeration:
@@ -25,12 +27,97 @@ GRID.COL <-  "#ffffff"
 ##   'NC': 6,      red     => #d7424c
 ##   'LIH': 7,     orange  => #eb6532
 ##   [pad]: 8,     white   => #ffffff
-renumerate <- function(BC) {
+
+# Fix enumeration as outputted by Python program
+renumerate.fix <- function(BC) {
   BC[BC==0] <- -1
   BC[BC==7] <- 0
   BC[BC>=4 & BC<=6] <- BC[BC>=4 & BC<=6]+1
   BC[BC==-1] <- 4
+  # fix 1/3 switch
+  BC[BC==1] <- -1
+  BC[BC==3] <- 1
+  BC[BC==-1] <- 3
   BC
+}
+
+make.color.bins <- function(N=15, high.sat=TRUE) {
+  if(high.sat) {
+    COLORS <- GLYPH.COLS.MAX
+  } else {
+    COLORS <- GLYPH.COLS
+  }
+  COLOR.M <- sapply(COLORS, function(color) colorRampPalette(c("#ffffff", color))(N+1))
+  c(COLOR.M)
+}
+make.breaks <- function(MAX=0.8, MIN=0.1, N=15, MOST=1, LEAST=0) {
+  th <- (MAX-MIN)/N   ## bin for above and below bin threshold
+  c(LEAST, sapply(0:(N-1), function(i) MIN+i*th), MOST)
+}
+make.offsets <- function(breaks, N=15) {
+  offsets <- sapply(1:(N+1), function(i) (breaks[i]+breaks[i+1])/2)
+  offsets <- c(offsets, tail(offsets,1)) ## offset beyond max value is still max value
+  offsets
+}
+
+order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2) {
+  R = list()
+  D.cls.r <- dist(CLS)
+  D.cls.c <- dist(t(CLS))
+  D.DCOR.r <- as.dist(1-cor(t(DCOR), method="pearson")) + dist(DCOR)
+  D.DCOR.c <- as.dist(1-cor(DCOR, method="pearson")) + dist(t(DCOR))
+  Rowv <- rowMeans(DCOR, na.rm = TRUE)
+  Colv <- colMeans(DCOR, na.rm = TRUE)
+  R$Rhclust <- as.dendrogram(hclust(D.DCOR.r*DCOR.weight+D.cls.r, method="average"))
+  R$Rhclust <- reorder(R$Rhclust, Rowv)
+  R$Chclust <- as.dendrogram(hclust(D.DCOR.c*DCOR.weight+D.cls.c, method="average"))
+  R$Chclust <- reorder(R$Chclust, Colv)
+  R
+}
+
+
+splom <- function(CLS, DCOR, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.1, MAX=0.8, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, grid="auto", grid.col=GRID.COL, lwd=1, ...) {
+  ## Clustering
+  R <- order.cls.dcor(CLS, DCOR, DCOR.weight)
+  rowInd <- order.dendrogram(R$Rhclust)
+  colInd <- order.dendrogram(R$Chclust)
+  CLS <- CLS[rowInd, colInd]
+  DCOR <- DCOR[rowInd, colInd]
+
+  ## Generate color/class bins
+  R$COLOR.V <- make.color.bins(N, high.sat)
+  R$breaks <- make.breaks(MAX, MIN, N, MOST, LEAST)
+  R$offsets <- make.offsets(R$breaks, N)
+  ## Select the greatest offset less than x.
+  choose.offset <- function(x) R$offsets[tail(which(R$breaks<=x),1)]
+  N.BREAKS <- c(sapply(0:8, function(x) rep(x,N+1)+R$breaks[1:(N+1)]), 9)
+
+  ## Make image heatmap from matrices
+  OFFSET <- apply(DCOR, c(1,2), choose.offset)
+  R$G <- CLS+OFFSET
+  if (asGlyphs) {
+    R$G <- expand.cls(R$G, pad)
+    if (pad)
+      R$G[R$G==8] <- 8.01
+  }
+  Img <- t(R$G)[,seq(nrow(R$G),1,-1)]
+
+  ## Draw image
+  w <- ncol(R$G); h <- nrow(R$G)
+  image(1:w, 1:h, Img, col=R$COLOR.V, breaks=N.BREAKS, axes=FALSE, xlab="", ylab="", useRaster=useRaster, ...)
+
+  ## Draw grid
+  if (grid==TRUE || (grid=="auto" && asGlyphs)) {
+    if (asGlyphs)
+      if (pad) 
+        grid.offset <- 3
+      else
+        grid.offset <- 2
+    else
+      grid.offset <- 1
+    draw.grid(grid.offset, w, h, grid.col, lwd)
+  }
+  R
 }
 
 
@@ -87,24 +174,24 @@ order.cls <- function(CLS) {
 ### Expand CLS matrix into 2x2 glyphs.
 ## --------------------
 # 0,  1,2,3,  4,  5,6,7
-to.glyph <- function(c) {
+to.glyph <- function(z) {
   r <- NaN
-  if(c == 0)  # NA    (no significant dependency)
+  if(z >= 0 && z < 1)  # NA    (no significant dependency)
     r <- matrix(c(0,0,0,0), nrow=2)
-  if(c == 1)  # HIH   (high x implies high y)
-    r <- matrix(c(1,1,1,0), nrow=2)
-  if(c == 2)  # PC    (positive correlation)
-    r <- matrix(c(0,2,2,0), nrow=2)
-  if(c == 3)  # LIL   (low x implies low y)
-    r <- matrix(c(0,3,3,3), nrow=2)
-  if(c == 4)  # UNL   (unspecified non-linear)
-    r <- matrix(c(4,4,4,4), nrow=2)
-  if(c == 5)  # HIL   (high x implies low y)
-    r <- matrix(c(5,5,0,5), nrow=2)
-  if(c == 6)  # NC    (negative correlation)   
-    r <- matrix(c(6,0,0,6), nrow=2)
-  if(c == 7)  # LIH   (low x implies low y)   
-    r <- matrix(c(7,0,7,7), nrow=2)
+  if(z >= 1 && z < 2)  # HIH   (high x implies high y)
+    r <- matrix(c(z,z,z,0), nrow=2)
+  if(z >= 2 && z < 3)  # PC    (positive correlation)
+    r <- matrix(c(0,z,z,0), nrow=2)
+  if(z >= 3 && z < 4)  # LIL   (low x implies low y)
+    r <- matrix(c(0,z,z,z), nrow=2)
+  if(z >= 4 && z < 5)  # UNL   (unspecified non-linear)
+    r <- matrix(c(z,z,z,z), nrow=2)
+  if(z >= 5 && z < 6)  # HIL   (high x implies low y)
+    r <- matrix(c(z,z,0,z), nrow=2)
+  if(z >= 6 && z < 7)  # NC    (negative correlation)   
+    r <- matrix(c(z,0,0,z), nrow=2)
+  if(z >= 7 && z < 8)  # LIH   (low x implies low y)   
+    r <- matrix(c(z,0,z,z), nrow=2)
   r
 }
 
@@ -125,6 +212,15 @@ expand.cls <- function(CLS, pad=FALSE) {
         G[(i*3+2):(i*3+3),(j*3+2):(j*3+3)] <- to.glyph(CLS[i+1,j+1])
   }
   G
+}
+
+# 
+summary.plots <- function(CLS, DCOR) {
+  Z <- split(DCOR, CLS)
+  names(Z) <- CLS.ENUM[match(names(Z), names(CLS.ENUM))]
+  boxplot(Z, col=GLYPH.COLS[2:8], main="dCOR per Class")
+  barplot(sapply(Z,length), col=GLYPH.COLS[2:8], main="Boolean Class Frequency")
+  hist(DCOR)
 }
 
 
@@ -149,6 +245,10 @@ draw.glyphs <- function(G, col=GLYPH.COLS, grid=0, grid.col=GRID.COL, useRaster=
   image(1:w, 1:h, Img, col=col, breaks=breaks,
     axes=FALSE, xlab="", ylab="", useRaster=useRaster)
   ## Add vector grid.
+  draw.grid(grid, w, h, grid.col, lwd)
+}
+
+draw.grid <- function(grid, w, h, grid.col=GRID.COL, lwd=1) {
   if (grid != 0) {
     os <- grid-0.5
     if(grid==3) os<-os-0.5
@@ -194,3 +294,5 @@ plot.vtr <- function(G, width=7, height=NULL, fname="cls.plot.pdf", ...) {
   # Return size of image saved in inches.
   c(width, height)
 }
+
+## Generate intensity scale

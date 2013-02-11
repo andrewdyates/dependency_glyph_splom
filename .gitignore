@@ -14,6 +14,8 @@ report/*
 # Ignore images generated during testing.
 *.png
 *.pdf
+# Ignore sample data
+data/*
 
 # C extensions
 *.so
