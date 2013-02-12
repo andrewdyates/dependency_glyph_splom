@@ -160,7 +160,6 @@ image(1:w, 1:h, Img, col=COLOR.V, breaks=N.BREAKS, axes=FALSE, xlab="", ylab="",
 # Load mRNA
 methyl <- as.matrix(read.table("data/Methyl_correct_aligned.tab.gz", header=TRUE, sep="\t", row.names=1))
 mRNA <- as.matrix(read.table("data/mRNA_correct_aligned.tab.gz", header=TRUE, sep="\t", row.names=1))
-save(methyl, mRNA, file="data/methyl_mrna.RData")
 # load("data/methyl_mrna.RData")
 
 #CLS  <- BC0.cls

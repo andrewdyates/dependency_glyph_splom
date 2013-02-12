@@ -99,11 +99,14 @@ get.order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2) {
 }
 
 ## Draw only class enumerations.
-splom.cls <- function(CLS, asGlyphs=FALSE, pad=FALSE, ...) {
+splom.cls <- function(CLS, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, ...) {
   R <- get.cls.order(CLS)
   rowInd <- order.dendrogram(R$Rhclust)
   colInd <- order.dendrogram(R$Chclust)
-  R$G <- CLS[rowInd, colInd]
+  if (reorder)
+    R$G <- CLS[rowInd, colInd]
+  else
+    R$G <- CLS
   if (asGlyphs) 
     R$G <- expand.cls(R$G, pad=pad)
   draw.glyphs(R$G, grid=0, ...)
@@ -111,14 +114,15 @@ splom.cls <- function(CLS, asGlyphs=FALSE, pad=FALSE, ...) {
 }
 
 ## Draw DCOR scaled class enumerations.
-splom.dcor <- function(CLS, DCOR, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.1, MAX=0.8, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, grid="auto", grid.col=GRID.COL, lwd=1, ...) {
+splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.1, MAX=0.8, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, grid="auto", grid.col=GRID.COL, lwd=1, ...) {
   ## Clustering
   R <- get.order.cls.dcor(CLS, DCOR, DCOR.weight)
   rowInd <- order.dendrogram(R$Rhclust)
   colInd <- order.dendrogram(R$Chclust)
-  CLS <- CLS[rowInd, colInd]
-  DCOR <- DCOR[rowInd, colInd]
-
+  if (reorder) {
+    CLS <- CLS[rowInd, colInd]
+    DCOR <- DCOR[rowInd, colInd]
+  }
   ## Generate color/class bins
   R$COLOR.V <- make.color.bins(N, high.sat)
   R$breaks <- make.breaks(MAX, MIN, N, MOST, LEAST)
@@ -148,24 +152,30 @@ splom.dcor <- function(CLS, DCOR, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.1, MAX=
 ## Extend heatmap.2 to generate a heatmap with decent colors and clustering.
 ## --------------------
 ## EXAMPLE:
-## H <- heatmap.3(BC0.Dcor, ylab="CpG", xlab="mRNA", symm=FALSE)
-heatmap.3 <- function(M, MIN=0.08, MAX=0.8, cols=brewer.pal(8,"RdYlBu"), ...) {
+## H <- heatmap.3(BC0.Dcor, ylab="CpG", xlab="mRNA")
+heatmap.3 <- function(M, MIN=0.08, MAX=0.8, cols=brewer.pal(8,"RdYlBu"), reorder=TRUE, symm=FALSE, symkey=FALSE, key=TRUE, trace="none", ...) {
   heatmap_breaks <- seq(MIN,MAX,0.01)
   heatmap_cols <- rev(colorRampPalette(cols)(length(heatmap_breaks)-1))
-  # distance as sum of euclidean and correlation. WARNING: cor on columns, dist on rows!
-  D.r <- as.dist(1-cor(t(M), method="pearson")) + dist(M)
-  D.c <- as.dist(1-cor(M, method="pearson")) + dist(t(M))
-  # Row and column ordering based on mean values
-  Rowv <- rowMeans(M, na.rm = TRUE)
-  Colv <- colMeans(M, na.rm = TRUE)
-  Rhclust <- as.dendrogram(hclust(D.r, method="average"))
-  Rhclust <- reorder(Rhclust, Rowv)
-  Chclust <- as.dendrogram(hclust(D.c, method="average"))
-  Chclust <- reorder(Chclust, Colv)
+  if (reorder) {
+    # distance as sum of euclidean and correlation. WARNING: cor on columns, dist on rows!
+    D.r <- as.dist(1-cor(t(M), method="pearson")) + dist(M)
+    D.c <- as.dist(1-cor(M, method="pearson")) + dist(t(M))
+    # Row and column ordering based on mean values
+    Rowv <- rowMeans(M, na.rm = TRUE)
+    Colv <- colMeans(M, na.rm = TRUE)
+    Rhclust <- as.dendrogram(hclust(D.r, method="average"))
+    Rhclust <- reorder(Rhclust, Rowv)
+    Chclust <- as.dendrogram(hclust(D.c, method="average"))
+    Chclust <- reorder(Chclust, Colv)
+    dendrogram <- "both"
+  } else {
+    Rhclust <- NULL; Chclust <- NULL;
+    dendrogram <- "none"
+  }
 
   heatmap.2(as.matrix(M),
     col=heatmap_cols, breaks=heatmap_breaks,
-    key=TRUE, symkey=FALSE, trace="none",
+    key=key, symkey=symkey, trace=trace, dendrogram=dendrogram,
     Rowv=Rhclust, Colv=Chclust, ...
   )
 }
