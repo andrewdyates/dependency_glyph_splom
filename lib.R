@@ -41,6 +41,29 @@ renumerate.fix <- function(BC) {
   BC
 }
 
+splom <- function(CLS, DCOR=NULL, asGlyphs=FALSE, pad=FALSE, grid="auto", grid.col=GRID.COL, lwd=1, ...) {
+  if(is.null(DCOR)) {
+    R <- splom.cls(CLS, asGlyphs=asGlyphs, pad=pad, ...)
+  } else {
+    R <- splom.dcor(CLS, DCOR=DCOR, asGlyphs=asGlyphs, pad=pad, ...)
+  }
+  if (grid==TRUE || (grid=="auto" && asGlyphs)) {
+    if (asGlyphs)
+      if (pad) 
+        grid.offset <- 3
+      else
+        grid.offset <- 2
+    else
+      grid.offset <- 1
+    w <- ncol(R$G); h <- nrow(R$G)
+    draw.grid(grid.offset, w, h, grid.col, lwd)
+  }
+  R
+}
+
+# ========================================
+# ========================================
+
 make.color.bins <- function(N=15, high.sat=TRUE) {
   if(high.sat) {
     COLORS <- GLYPH.COLS.MAX
@@ -60,7 +83,7 @@ make.offsets <- function(breaks, N=15) {
   offsets
 }
 
-order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2) {
+get.order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2) {
   R = list()
   D.cls.r <- dist(CLS)
   D.cls.c <- dist(t(CLS))
@@ -75,10 +98,22 @@ order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2) {
   R
 }
 
+## Draw only class enumerations.
+splom.cls <- function(CLS, asGlyphs=FALSE, pad=FALSE, ...) {
+  R <- get.cls.order(CLS)
+  rowInd <- order.dendrogram(R$Rhclust)
+  colInd <- order.dendrogram(R$Chclust)
+  R$G <- CLS[rowInd, colInd]
+  if (asGlyphs) 
+    R$G <- expand.cls(R$G, pad=pad)
+  draw.glyphs(R$G, grid=0, ...)
+  R
+}
 
-splom <- function(CLS, DCOR, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.1, MAX=0.8, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, grid="auto", grid.col=GRID.COL, lwd=1, ...) {
+## Draw DCOR scaled class enumerations.
+splom.dcor <- function(CLS, DCOR, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.1, MAX=0.8, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, grid="auto", grid.col=GRID.COL, lwd=1, ...) {
   ## Clustering
-  R <- order.cls.dcor(CLS, DCOR, DCOR.weight)
+  R <- get.order.cls.dcor(CLS, DCOR, DCOR.weight)
   rowInd <- order.dendrogram(R$Rhclust)
   colInd <- order.dendrogram(R$Chclust)
   CLS <- CLS[rowInd, colInd]
@@ -106,17 +141,6 @@ splom <- function(CLS, DCOR, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.1, MAX=0.8, 
   w <- ncol(R$G); h <- nrow(R$G)
   image(1:w, 1:h, Img, col=R$COLOR.V, breaks=N.BREAKS, axes=FALSE, xlab="", ylab="", useRaster=useRaster, ...)
 
-  ## Draw grid
-  if (grid==TRUE || (grid=="auto" && asGlyphs)) {
-    if (asGlyphs)
-      if (pad) 
-        grid.offset <- 3
-      else
-        grid.offset <- 2
-    else
-      grid.offset <- 1
-    draw.grid(grid.offset, w, h, grid.col, lwd)
-  }
   R
 }
 

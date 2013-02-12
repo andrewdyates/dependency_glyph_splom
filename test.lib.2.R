@@ -8,7 +8,6 @@ summary.plots(BCBig.cls, BCBig.dcor)
 
 CLS <- BC0.cls
 DCOR <- BC0.dcor
-asGlyphs=FALSE; pad=FALSE; N=15; MIN=0.1; MAX=0.8; MOST=1; LEAST=0; DCOR.weight=2; useRaster=FALSE
 
 R <- splom(BC0.cls, BC0.dcor)
 R <- splom(BC0.cls, BC0.dcor, MAX=0.5, high.sat=FALSE)
@@ -17,6 +16,11 @@ R <- splom(BC0.cls, BC0.dcor, asGlyphs=FALSE)
 R <- splom(BC0.cls, BC0.dcor, asGlyphs=TRUE)
 R <- splom(BC0.cls, BC0.dcor, asGlyphs=TRUE, pad=TRUE)
 R <- splom(BC0.cls, BC0.dcor, asGlyphs=TRUE, pad=TRUE, grid.col="#FF0000")
+
+R <- splom(BC0.cls)
+R <- splom(BC0.cls, asGlyphs=TRUE)
+R <- splom(BC0.cls, asGlyphs=TRUE, grid.col="#FF0000")
+R <- splom(BC0.cls, asGlyphs=TRUE, pad=TRUE, grid.col="#FF0000")
 
 # EXAMPLE RASTER OUTPUT
 scalar <- 10
