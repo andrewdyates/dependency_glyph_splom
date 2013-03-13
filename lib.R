@@ -28,6 +28,15 @@ GLYPH.COLS.MAX <- c("#ffffff", "#00b271", "#0089d9", "#3424b3", "#000000", "#a30
 ##   'LIH': 7,     orange  => #eb6532
 ##   [pad]: 8,     white   => #ffffff
 
+# Append "" after each name in double-sized list
+expand.names <- function(i, name.list) { 
+  if (i%%2==1) {
+    name.list[(i+1)/2]
+  } else {
+    ""
+  }
+}
+
 # Fix enumeration as outputted by Python program
 renumerate.fix <- function(BC) {
   BC[BC==0] <- -1
@@ -114,14 +123,18 @@ splom.cls <- function(CLS, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, ...) {
 }
 
 ## Draw DCOR scaled class enumerations.
-splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.1, MAX=0.8, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, grid="auto", grid.col=GRID.COL, lwd=1, ...) {
+splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.1, MAX=0.8, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, ...) {
   ## Clustering
-  R <- get.order.cls.dcor(CLS, DCOR, DCOR.weight)
-  rowInd <- order.dendrogram(R$Rhclust)
-  colInd <- order.dendrogram(R$Chclust)
   if (reorder) {
+    R <- get.order.cls.dcor(CLS, DCOR, DCOR.weight)
+    rowInd <- order.dendrogram(R$Rhclust)
+    colInd <- order.dendrogram(R$Chclust)
     CLS <- CLS[rowInd, colInd]
     DCOR <- DCOR[rowInd, colInd]
+  } else {
+    rowInd <- 1:dim(DCOR)[1]
+    colInd <- 1:dim(DCOR)[2]
+    R <- list()
   }
   ## Generate color/class bins
   R$COLOR.V <- make.color.bins(N, high.sat)
@@ -135,7 +148,7 @@ splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15,
   OFFSET <- apply(DCOR, c(1,2), choose.offset)
   R$G <- CLS+OFFSET
   if (asGlyphs) {
-    R$G <- expand.cls(R$G, pad)
+    R$G <- expand.cls(R$G, pad=pad)
     if (pad)
       R$G[R$G==8] <- 8.01
   }
@@ -143,8 +156,24 @@ splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15,
 
   ## Draw image
   w <- ncol(R$G); h <- nrow(R$G)
-  image(1:w, 1:h, Img, col=R$COLOR.V, breaks=N.BREAKS, axes=FALSE, xlab="", ylab="", useRaster=useRaster, ...)
+  sapply(1:(length(rownames(DCOR))*2), function(i) expand.names(i,rownames(DCOR)))
 
+  labRow <- sapply(1:(length(rownames(DCOR))*2), function(i) expand.names(i,rev(rownames(DCOR))))
+  labCol <- sapply(1:(length(rownames(DCOR))*2), function(i) expand.names(i,colnames(DCOR)))
+  nc <- dim(DCOR)[2]
+  nr <- dim(DCOR)[1]
+  par(mar = c(5, 0, 0, 5))
+  image(1:w, 1:h, Img, xlab="", ylab="", col=R$COLOR.V, breaks=N.BREAKS, axes=FALSE, useRaster=useRaster, ...)
+  axis(1, 1:(nc*2), labels = labCol, las = 2, line = -0.5, tick = 0, 
+       cex.axis = 0.7)
+  axis(4, 1:(nr*2), labels = labRow, las = 2, line = -0.5, tick = 0, 
+       cex.axis = 0.7)
+  
+  if (is.null(labRow)) 
+    labRow <- if (is.null(rownames(DCOR))) 
+      (1:nr)[rowInd]
+    else rownames(DCOR)
+  
   R
 }
 
@@ -208,53 +237,72 @@ order.cls <- function(CLS) {
 ### Expand CLS matrix into 2x2 glyphs.
 ## --------------------
 # 0,  1,2,3,  4,  5,6,7
-to.glyph <- function(z) {
+to.glyph <- function(z, bg=NA) {
   r <- NaN
   if(z >= 0 && z < 1)  # NA    (no significant dependency)
-    r <- matrix(c(0,0,0,0), nrow=2)
+    r <- matrix(c(bg,bg,bg,bg), nrow=2)
   if(z >= 1 && z < 2)  # HIH   (high x implies high y)
-    r <- matrix(c(z,z,z,0), nrow=2)
+    r <- matrix(c(z,z,z,bg), nrow=2)
   if(z >= 2 && z < 3)  # PC    (positive correlation)
-    r <- matrix(c(0,z,z,0), nrow=2)
+    r <- matrix(c(bg,z,z,bg), nrow=2)
   if(z >= 3 && z < 4)  # LIL   (low x implies low y)
-    r <- matrix(c(0,z,z,z), nrow=2)
+    r <- matrix(c(bg,z,z,z), nrow=2)
   if(z >= 4 && z < 5)  # UNL   (unspecified non-linear)
     r <- matrix(c(z,z,z,z), nrow=2)
   if(z >= 5 && z < 6)  # HIL   (high x implies low y)
-    r <- matrix(c(z,z,0,z), nrow=2)
+    r <- matrix(c(z,z,bg,z), nrow=2)
   if(z >= 6 && z < 7)  # NC    (negative correlation)   
-    r <- matrix(c(z,0,0,z), nrow=2)
+    r <- matrix(c(z,bg,bg,z), nrow=2)
   if(z >= 7 && z < 8)  # LIH   (low x implies low y)   
-    r <- matrix(c(z,0,z,z), nrow=2)
+    r <- matrix(c(z,bg,z,z), nrow=2)
   r
 }
 
 
 ## Given a class matrix, construct a glyph matrix.
 ## --------------------
-expand.cls <- function(CLS, pad=FALSE) {
-  if(!pad) {
-    G <- mat.or.vec(nrow(CLS)*2, ncol(CLS)*2)
-    for(i in 0:(nrow(CLS)-1))
-      for(j in 0:(ncol(CLS)-1))
-        G[(i*2+1):(i*2+2),(j*2+1):(j*2+2)] <- to.glyph(CLS[i+1,j+1])
-  } else {
+expand.cls <- function(CLS, TARGET=NULL, pad=FALSE, bg=NA) {
+  if(is.null(TARGET))
+    TARGET <- CLS
+  if (pad)
     G <- mat.or.vec(nrow(CLS)*3+1, ncol(CLS)*3+1)
-    G[,] <- 8 # fill with background enumeration
-    for(i in 0:(nrow(CLS)-1))
-      for(j in 0:(ncol(CLS)-1))
-        G[(i*3+2):(i*3+3),(j*3+2):(j*3+3)] <- to.glyph(CLS[i+1,j+1])
+  else
+    G <- mat.or.vec(nrow(CLS)*2, ncol(CLS)*2)
+  G[,] <- bg # fill with background enumeration
+  
+  for(i in 0:(nrow(CLS)-1)) {
+    for(j in 0:(ncol(CLS)-1)) {
+      gly <- to.glyph(CLS[i+1,j+1], bg)
+      if(is.na(bg))
+        gly[!is.na(gly)] <- TARGET[i+1,j+1]
+      else
+        gly[gly!=bg] <- TARGET[i+1,j+1]
+      if (pad)
+        G[(i*3+2):(i*3+3),(j*3+2):(j*3+3)] <- gly
+      else
+        G[(i*2+1):(i*2+2),(j*2+1):(j*2+2)] <- gly
+    }
   }
   G
 }
 
 # 
-summary.plots <- function(CLS, DCOR) {
+summary.plots <- function(CLS, DCOR, sym=F) {
+  if (sym) {
+    CLS <- CLS[upper.tri(CLS, diag = FALSE)]
+    DCOR <- DCOR[upper.tri(DCOR, diag = FALSE)]
+    upper.note <- "(upper triangle)"
+  } else {
+    upper.note <- ""
+  }
+  ENUM <- list()
+  for (i in 0:7) ENUM[[as.character(i)]] <- 0
   Z <- split(DCOR, CLS)
-  names(Z) <- CLS.ENUM[match(names(Z), names(CLS.ENUM))]
-  boxplot(Z, col=GLYPH.COLS[2:8], main="dCOR per Class")
-  barplot(sapply(Z,length), col=GLYPH.COLS[2:8], main="Boolean Class Frequency")
-  hist(DCOR)
+  for (n in names(Z)) ENUM[[n]] <- Z[[n]]
+  names(ENUM) <- CLS.ENUM[match(names(ENUM), names(CLS.ENUM))]
+  boxplot(ENUM, col=GLYPH.COLS[1:8], main=paste("dCOR per Class", upper.note))
+  barplot(sapply(ENUM,length), col=GLYPH.COLS[1:8], main="Boolean Class Frequency")
+  hist(as.matrix(DCOR), main="Histogram of all-pairs dCOR")
 }
 
 
