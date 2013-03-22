@@ -123,7 +123,7 @@ splom.cls <- function(CLS, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, ...) {
 }
 
 ## Draw DCOR scaled class enumerations.
-splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.1, MAX=0.8, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, ...) {
+splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.1, MAX=0.8, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, draw.labs=T, ...) {
   ## Clustering
   if (reorder) {
     R <- get.order.cls.dcor(CLS, DCOR, DCOR.weight)
@@ -162,12 +162,15 @@ splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15,
   labCol <- sapply(1:(length(rownames(DCOR))*2), function(i) expand.names(i,colnames(DCOR)))
   nc <- dim(DCOR)[2]
   nr <- dim(DCOR)[1]
-  par(mar = c(5, 0, 0, 5))
+  if (draw.labs)
+    par(mar = c(5, 0, 5, 5))
   image(1:w, 1:h, Img, xlab="", ylab="", col=R$COLOR.V, breaks=N.BREAKS, axes=FALSE, useRaster=useRaster, ...)
-  axis(1, 1:(nc*2), labels = labCol, las = 2, line = -0.5, tick = 0, 
-       cex.axis = 0.7)
-  axis(4, 1:(nr*2), labels = labRow, las = 2, line = -0.5, tick = 0, 
-       cex.axis = 0.7)
+  if (draw.labs) {
+    axis(1, 1:(nc*2), labels = labCol, las = 2, line = -0.5, tick = 0, 
+         cex.axis = 0.7)
+    axis(4, 1:(nr*2), labels = labRow, las = 2, line = -0.5, tick = 0, 
+         cex.axis = 0.7)
+  }
   
   if (is.null(labRow)) 
     labRow <- if (is.null(rownames(DCOR))) 
@@ -291,7 +294,7 @@ summary.plots <- function(CLS, DCOR, sym=F) {
   if (sym) {
     CLS <- CLS[upper.tri(CLS, diag = FALSE)]
     DCOR <- DCOR[upper.tri(DCOR, diag = FALSE)]
-    upper.note <- "(upper triangle)"
+    upper.note <- " (upper triangle)"
   } else {
     upper.note <- ""
   }
@@ -300,9 +303,9 @@ summary.plots <- function(CLS, DCOR, sym=F) {
   Z <- split(DCOR, CLS)
   for (n in names(Z)) ENUM[[n]] <- Z[[n]]
   names(ENUM) <- CLS.ENUM[match(names(ENUM), names(CLS.ENUM))]
-  boxplot(ENUM, col=GLYPH.COLS[1:8], main=paste("dCOR per Class", upper.note))
-  barplot(sapply(ENUM,length), col=GLYPH.COLS[1:8], main="Boolean Class Frequency")
-  hist(as.matrix(DCOR), main="Histogram of all-pairs dCOR")
+  boxplot(ENUM, col=GLYPH.COLS[1:8], main=paste0("dCOR per Class", upper.note))
+  barplot(sapply(ENUM,length), col=GLYPH.COLS[1:8], main=paste0("Boolean Class Frequency", upper.note))
+  hist(as.matrix(DCOR), main=paste0("Histogram of all-pairs dCOR", upper.note))
 }
 
 
@@ -378,3 +381,5 @@ plot.vtr <- function(G, width=7, height=NULL, fname="cls.plot.pdf", ...) {
 }
 
 ## Generate intensity scale
+## -----
+
