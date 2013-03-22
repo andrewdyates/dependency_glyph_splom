@@ -380,6 +380,21 @@ plot.vtr <- function(G, width=7, height=NULL, fname="cls.plot.pdf", ...) {
   c(width, height)
 }
 
-## Generate intensity scale
+## TODO: Manually Generate intensity scale
 ## -----
+
+# Load distances
+G.DIST.TABLE <- read.table("glyph.dists.csv", as.is=T, sep=",")
+
+glyph.dist.f <- function(A,B) {
+  # Requires that NA is mapped to 8 rather than 0
+  sum(apply(cbind(A,B), 1, function(p) G.DIST.TABLE[p[1],p[2]]))
+}
+
+gen.glyph.dist.m <- function(BC, recast.na.0=T) {
+  if(recast.na.0)
+    BC[BC==0] <- 8 # R indexes from 1, not 0, so remap 0 to 1+ the biggest glyph enum (8=7+1)
+  n <- nrow(BC)
+  as.dist(outer(1:n,1:n, FUN = Vectorize( function(i,j) glyph.dist.f(BC[i,],BC[j,]) )))
+}
 
