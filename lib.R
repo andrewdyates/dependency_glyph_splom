@@ -82,7 +82,7 @@ make.color.bins <- function(N=15, high.sat=TRUE) {
   COLOR.M <- sapply(COLORS, function(color) colorRampPalette(c("#ffffff", color))(N+1))
   c(COLOR.M)
 }
-make.breaks <- function(MAX=0.8, MIN=0.1, N=15, MOST=1, LEAST=0) {
+make.breaks <- function(MAX=1, MIN=0, N=15, MOST=1, LEAST=0) {
   th <- (MAX-MIN)/N   ## bin for above and below bin threshold
   c(LEAST, sapply(0:(N-1), function(i) MIN+i*th), MOST)
 }
@@ -92,17 +92,30 @@ make.offsets <- function(breaks, N=15) {
   offsets
 }
 
-get.order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2) {
+get.order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2, CLS.enum.dist=F, DCOR.include.PCC=F) {
   R = list()
-  D.cls.r <- dist(CLS)
-  D.cls.c <- dist(t(CLS))
-  D.DCOR.r <- as.dist(1-cor(t(DCOR), method="pearson")) + dist(DCOR)
-  D.DCOR.c <- as.dist(1-cor(DCOR, method="pearson")) + dist(t(DCOR))
+  if (CLS.enum.dist) {
+    D.cls.r <- dist(CLS)
+    D.cls.c <- dist(t(CLS))
+  } else {
+    D.cls.r <- gen.glyph.dist.m(CLS)
+    D.cls.c <- gen.glyph.dist.m(t(CLS))
+    # max dist: 4*m
+  }
+  if (DCOR.include.PCC) {
+    D.DCOR.r <- as.dist(1-cor(t(DCOR), method="pearson")) + dist(DCOR)
+    D.DCOR.c <- as.dist(1-cor(DCOR, method="pearson")) + dist(t(DCOR))
+  } else {
+    D.DCOR.r <- dist(DCOR)
+    # max dist: sqrt(m)
+    D.DCOR.c <- dist(t(DCOR))
+  }
+
   Rowv <- rowMeans(DCOR, na.rm = TRUE)
   Colv <- colMeans(DCOR, na.rm = TRUE)
-  R$Rhclust <- as.dendrogram(hclust(D.DCOR.r*DCOR.weight+D.cls.r, method="average"))
+  R$Rhclust <- as.dendrogram(hclust(D.DCOR.r*DCOR.weight+sqrt(D.cls.r), method="average"))
   R$Rhclust <- reorder(R$Rhclust, Rowv)
-  R$Chclust <- as.dendrogram(hclust(D.DCOR.c*DCOR.weight+D.cls.c, method="average"))
+  R$Chclust <- as.dendrogram(hclust(D.DCOR.c*DCOR.weight+sqrt(D.cls.c), method="average"))
   R$Chclust <- reorder(R$Chclust, Colv)
   R
 }
@@ -158,18 +171,33 @@ splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15,
   w <- ncol(R$G); h <- nrow(R$G)
   sapply(1:(length(rownames(DCOR))*2), function(i) expand.names(i,rownames(DCOR)))
 
-  labRow <- sapply(1:(length(rownames(DCOR))*2), function(i) expand.names(i,rev(rownames(DCOR))))
-  labCol <- sapply(1:(length(rownames(DCOR))*2), function(i) expand.names(i,colnames(DCOR)))
+  if (asGlyphs) {
+    labRow <- sapply(1:(length(rownames(DCOR))*2), function(i) expand.names(i,rev(rownames(DCOR))))
+    labCol <- sapply(1:(length(colnames(DCOR))*2), function(i) expand.names(i,colnames(DCOR)))
+  } else {
+    labRow <- rownames(DCOR)
+    labCol <- colnames(DCOR)
+  }
+  
   nc <- dim(DCOR)[2]
   nr <- dim(DCOR)[1]
   if (draw.labs)
     par(mar = c(5, 0, 5, 5))
   image(1:w, 1:h, Img, xlab="", ylab="", col=R$COLOR.V, breaks=N.BREAKS, axes=FALSE, useRaster=useRaster, ...)
   if (draw.labs) {
-    axis(1, 1:(nc*2), labels = labCol, las = 2, line = -0.5, tick = 0, 
-         cex.axis = 0.7)
-    axis(4, 1:(nr*2), labels = labRow, las = 2, line = -0.5, tick = 0, 
-         cex.axis = 0.7)
+    if (asGlyphs) {
+      print(paste("!", nc, nr))
+      print(paste("!!", length(labCol), nc*2))
+      axis(1, 1:(nc*2), labels = labCol, las = 2, line = -0.5, tick = 0, 
+           cex.axis = 0.7)
+      axis(4, 1:(nr*2), labels = labRow, las = 2, line = -0.5, tick = 0, 
+           cex.axis = 0.7)
+    } else {
+      axis(1, 1:nc, labels = labCol, las = 2, line = -0.5, tick = 0, 
+           cex.axis = 0.7)
+      axis(4, 1:nr, labels = labRow, las = 2, line = -0.5, tick = 0, 
+           cex.axis = 0.7)
+    }
   }
   
   if (is.null(labRow)) 
@@ -384,7 +412,20 @@ plot.vtr <- function(G, width=7, height=NULL, fname="cls.plot.pdf", ...) {
 ## -----
 
 # Load distances
-G.DIST.TABLE <- read.table("glyph.dists.csv", as.is=T, sep=",")
+#G.DIST.TABLE <- read.table("glyph.dists.csv", as.is=T, sep=",")
+cls.enum.names <- c("hih","pc","lil","unl","hil","nc","lih","na")
+r1 <- c(0,1,2,1,2,3,2,2)
+r2 <- c(1,0,1,2,3,4,3,2)
+r3 <- c(2,1,0,1,2,3,2,2)
+r4 <- c(1,2,1,0,1,2,1,2)
+r5 <- c(2,3,2,1,0,1,2,2)
+r6 <- c(3,4,3,2,1,0,1,2)
+r7 <- c(2,3,2,1,2,1,0,2)
+r8 <- c(2,2,2,2,2,2,2,0)
+G.DIST.TABLE <- rbind(r1,r2,r3,r4,r5,r6,r7,r8)
+rownames(G.DIST.TABLE) <- cls.enum.names
+colnames(G.DIST.TABLE) <- cls.enum.names
+
 
 glyph.dist.f <- function(A,B) {
   # Requires that NA is mapped to 8 rather than 0

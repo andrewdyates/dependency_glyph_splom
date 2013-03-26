@@ -33,3 +33,25 @@ gen.glyph.dist.m <- function(BC, recast.na.0=T) {
   as.dist(outer(1:n,1:n, FUN = Vectorize( function(i,j) glyph.dist.f(BC[i,],BC[j,]) )))
 }
 
+###
+source('lib.R')
+CLS <- wt.ms.2mut$SCAN.CLS$CLS
+DCOR <- wt.ms.2mut$SCAN.D$DCOR
+GlyphDist <- gen.glyph.dist.m(wt.ms.2mut$SCAN.CLS$CLS)
+EnumDist <- dist(wt.ms.2mut$SCAN.CLS$CLS)
+dCORDistPCC <- as.dist(1-cor(t(DCOR), method="pearson")) + dist(DCOR)
+dCORDist <- dist(DCOR)
+dCORPCC <- as.dist(1-cor(t(DCOR), method="pearson"))
+
+pdf("glyph.dist.versus.enum.euclidean.dist.pdf")
+hist(GlyphDist)
+hist(EnumDist)
+hist(dCORDistPCC)
+hist(dCORDist)
+hist(dCORPCC)
+plot(GlyphDist, EnumDist, main="Glyph vs euclidean enum dist for SCAN c.elegans gold network")
+plot(dCORDist, dCORPCC)
+plot(dCORDistPCC, dCORDist)
+plot(dCORDist, GlyphDist)
+plot(dCORDistPCC, GlyphDist)
+dev.off()
