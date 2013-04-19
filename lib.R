@@ -125,6 +125,10 @@ splom.cls <- function(CLS, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, ...) {
   R <- get.cls.order(CLS)
   rowInd <- order.dendrogram(R$Rhclust)
   colInd <- order.dendrogram(R$Chclust)
+  
+  w <- ncol(R$G); h <- nrow(R$G)
+  sapply(1:(length(rownames(DCOR))*2), function(i) expand.names(i,rownames(DCOR)))
+  
   if (reorder)
     R$G <- CLS[rowInd, colInd]
   else
@@ -167,7 +171,7 @@ splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15,
   }
   Img <- t(R$G)[,seq(nrow(R$G),1,-1)]
 
-  ## Draw image
+  # Row and column labels
   w <- ncol(R$G); h <- nrow(R$G)
   sapply(1:(length(rownames(DCOR))*2), function(i) expand.names(i,rownames(DCOR)))
 
@@ -178,7 +182,8 @@ splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15,
     labRow <- rownames(DCOR)
     labCol <- colnames(DCOR)
   }
-  
+
+  ## Draw image
   nc <- dim(DCOR)[2]
   nr <- dim(DCOR)[1]
   if (draw.labs)
@@ -186,8 +191,6 @@ splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15,
   image(1:w, 1:h, Img, xlab="", ylab="", col=R$COLOR.V, breaks=N.BREAKS, axes=FALSE, useRaster=useRaster, ...)
   if (draw.labs) {
     if (asGlyphs) {
-      print(paste("!", nc, nr))
-      print(paste("!!", length(labCol), nc*2))
       axis(1, 1:(nc*2), labels = labCol, las = 2, line = -0.5, tick = 0, 
            cex.axis = 0.7)
       axis(4, 1:(nr*2), labels = labRow, las = 2, line = -0.5, tick = 0, 
@@ -246,8 +249,8 @@ heatmap.3 <- function(M, MIN=0.08, MAX=0.8, cols=brewer.pal(8,"RdYlBu"), reorder
 # Helper function to return class ordering as Row / Column dendrogram objs.
 get.cls.order <- function(CLS) {
   R = list()
-  D.cls.r <- dist(CLS)
-  D.cls.c <- dist(t(CLS))
+  D.cls.r <- gen.glyph.dist.m(CLS)
+  D.cls.c <- gen.glyph.dist.m(t(CLS))
   Rowv <- rowMeans(CLS, na.rm = TRUE)
   Colv <- colMeans(CLS, na.rm = TRUE)
   R$Rhclust <- as.dendrogram(hclust(D.cls.r, method="average"))
@@ -432,6 +435,7 @@ glyph.dist.f <- function(A,B) {
   sum(apply(cbind(A,B), 1, function(p) G.DIST.TABLE[p[1],p[2]]))
 }
 
+# all-rows sum glyph hamming distance matrix
 gen.glyph.dist.m <- function(BC, recast.na.0=T) {
   if(recast.na.0)
     BC[BC==0] <- 8 # R indexes from 1, not 0, so remap 0 to 1+ the biggest glyph enum (8=7+1)
