@@ -181,7 +181,7 @@ splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15,
     labRow <- sapply(1:(length(rownames(DCOR))*2), function(i) expand.names(i,rev(rownames(DCOR))))
     labCol <- sapply(1:(length(colnames(DCOR))*2), function(i) expand.names(i,colnames(DCOR)))
   } else {
-    labRow <- rownames(DCOR)
+    labRow <- rev(rownames(DCOR))
     labCol <- colnames(DCOR)
   }
 
