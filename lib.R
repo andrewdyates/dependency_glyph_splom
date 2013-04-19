@@ -92,7 +92,7 @@ make.offsets <- function(breaks, N=15) {
   offsets
 }
 
-get.order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2, CLS.enum.dist=F, DCOR.include.PCC=F) {
+get.order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2, clust.meth="complete", CLS.enum.dist=F, DCOR.include.PCC=F) {
   R = list()
   if (CLS.enum.dist) {
     D.cls.r <- dist(CLS)
@@ -113,9 +113,11 @@ get.order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2, CLS.enum.dist=F, DCOR.i
 
   Rowv <- rowMeans(DCOR, na.rm = TRUE)
   Colv <- colMeans(DCOR, na.rm = TRUE)
-  R$Rhclust <- as.dendrogram(hclust(D.DCOR.r*DCOR.weight+sqrt(D.cls.r), method="average"))
+  R$D.row <- D.DCOR.r*DCOR.weight+sqrt(D.cls.r)
+  R$D.col <- D.DCOR.c*DCOR.weight+sqrt(D.cls.c)
+  R$Rhclust <- as.dendrogram(hclust(R$D.row, method=clust.meth))
   R$Rhclust <- reorder(R$Rhclust, Rowv)
-  R$Chclust <- as.dendrogram(hclust(D.DCOR.c*DCOR.weight+sqrt(D.cls.c), method="average"))
+  R$Chclust <- as.dendrogram(hclust(R$D.col, method=clust.meth))
   R$Chclust <- reorder(R$Chclust, Colv)
   R
 }
@@ -136,10 +138,10 @@ splom.cls <- function(CLS, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, ...) {
 }
 
 ## Draw DCOR scaled class enumerations.
-splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.1, MAX=0.8, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, draw.labs=T, ...) {
+splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.1, MAX=0.8, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, draw.labs=T, clust.meth="complete", ...) {
   ## Clustering
   if (reorder) {
-    R <- get.order.cls.dcor(CLS, DCOR, DCOR.weight)
+    R <- get.order.cls.dcor(CLS, DCOR, DCOR.weight, clust.meth=clust.meth)
     rowInd <- order.dendrogram(R$Rhclust)
     colInd <- order.dendrogram(R$Chclust)
     CLS <- CLS[rowInd, colInd]
@@ -186,8 +188,6 @@ splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15,
   image(1:w, 1:h, Img, xlab="", ylab="", col=R$COLOR.V, breaks=N.BREAKS, axes=FALSE, useRaster=useRaster, ...)
   if (draw.labs) {
     if (asGlyphs) {
-      print(paste("!", nc, nr))
-      print(paste("!!", length(labCol), nc*2))
       axis(1, 1:(nc*2), labels = labCol, las = 2, line = -0.5, tick = 0, 
            cex.axis = 0.7)
       axis(4, 1:(nr*2), labels = labRow, las = 2, line = -0.5, tick = 0, 
@@ -213,7 +213,7 @@ splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15,
 ## --------------------
 ## EXAMPLE:
 ## H <- heatmap.3(BC0.Dcor, ylab="CpG", xlab="mRNA")
-heatmap.3 <- function(M, MIN=0.08, MAX=0.8, cols=brewer.pal(8,"RdYlBu"), reorder=TRUE, symm=FALSE, symkey=FALSE, key=TRUE, trace="none", ...) {
+heatmap.3 <- function(M, MIN=0.08, MAX=0.8, cols=brewer.pal(8,"RdYlBu"), reorder=TRUE, symm=FALSE, symkey=FALSE, key=TRUE, trace="none", clust.meth="average", ...) {
   heatmap_breaks <- seq(MIN,MAX,0.01)
   heatmap_cols <- rev(colorRampPalette(cols)(length(heatmap_breaks)-1))
   if (reorder) {
@@ -223,9 +223,9 @@ heatmap.3 <- function(M, MIN=0.08, MAX=0.8, cols=brewer.pal(8,"RdYlBu"), reorder
     # Row and column ordering based on mean values
     Rowv <- rowMeans(M, na.rm = TRUE)
     Colv <- colMeans(M, na.rm = TRUE)
-    Rhclust <- as.dendrogram(hclust(D.r, method="average"))
+    Rhclust <- as.dendrogram(hclust(D.r, method=clust.meth))
     Rhclust <- reorder(Rhclust, Rowv)
-    Chclust <- as.dendrogram(hclust(D.c, method="average"))
+    Chclust <- as.dendrogram(hclust(D.c, method=clust.meth))
     Chclust <- reorder(Chclust, Colv)
     dendrogram <- "both"
   } else {
@@ -244,15 +244,15 @@ heatmap.3 <- function(M, MIN=0.08, MAX=0.8, cols=brewer.pal(8,"RdYlBu"), reorder
 ## Cluster an enumerated boolean dependency class matrix.
 ## --------------------
 # Helper function to return class ordering as Row / Column dendrogram objs.
-get.cls.order <- function(CLS) {
+get.cls.order <- function(CLS, clust.meth="complete") {
   R = list()
   D.cls.r <- dist(CLS)
   D.cls.c <- dist(t(CLS))
   Rowv <- rowMeans(CLS, na.rm = TRUE)
   Colv <- colMeans(CLS, na.rm = TRUE)
-  R$Rhclust <- as.dendrogram(hclust(D.cls.r, method="average"))
+  R$Rhclust <- as.dendrogram(hclust(D.cls.r, method=clust.meth))
   R$Rhclust <- reorder(R$Rhclust, Rowv)
-  R$Chclust <- as.dendrogram(hclust(D.cls.c, method="average"))
+  R$Chclust <- as.dendrogram(hclust(D.cls.c, method=clust.meth))
   R$Chclust <- reorder(R$Chclust, Colv)
   R
 }
