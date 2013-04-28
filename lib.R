@@ -418,18 +418,22 @@ plot.vtr <- function(G, width=7, height=NULL, fname="cls.plot.pdf", ...) {
 
 # Load distances
 #G.DIST.TABLE <- read.table("glyph.dists.csv", as.is=T, sep=",")
-cls.enum.names <- c("hih","pc","lil","unl","hil","nc","lih","na")
-r1 <- c(0,1,2,1,2,3,2,2)
-r2 <- c(1,0,1,2,3,4,3,2)
-r3 <- c(2,1,0,1,2,3,2,2)
-r4 <- c(1,2,1,0,1,2,1,2)
-r5 <- c(2,3,2,1,0,1,2,2)
-r6 <- c(3,4,3,2,1,0,1,2)
-r7 <- c(2,3,2,1,2,1,0,2)
-r8 <- c(2,2,2,2,2,2,2,0)
-G.DIST.TABLE <- rbind(r1,r2,r3,r4,r5,r6,r7,r8)
-rownames(G.DIST.TABLE) <- cls.enum.names
-colnames(G.DIST.TABLE) <- cls.enum.names
+make.cls.dist.M <- function() {
+  cls.enum.names <- c("hih","pc","lil","unl","hil","nc","lih","na")
+  r1 <- c(0,1,2,1,2,3,2,2)
+  r2 <- c(1,0,1,2,3,4,3,2)
+  r3 <- c(2,1,0,1,2,3,2,2)
+  r4 <- c(1,2,1,0,1,2,1,2)
+  r5 <- c(2,3,2,1,0,1,2,2)
+  r6 <- c(3,4,3,2,1,0,1,2)
+  r7 <- c(2,3,2,1,2,1,0,2)
+  r8 <- c(2,2,2,2,2,2,2,0)
+  G.DIST.TABLE <- rbind(r1,r2,r3,r4,r5,r6,r7,r8)
+  rownames(G.DIST.TABLE) <- cls.enum.names
+  colnames(G.DIST.TABLE) <- cls.enum.names
+  G.DIST.TABLE
+}
+G.DIST.TABLE <- make.cls.dist.M()
 
 
 glyph.dist.f <- function(A,B) {
