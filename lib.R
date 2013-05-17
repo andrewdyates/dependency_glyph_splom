@@ -331,14 +331,25 @@ summary.plots <- function(CLS, DCOR, sym=F) {
   } else {
     upper.note <- ""
   }
+  summary.plots.vector(CLS, DCOR)
+}
+
+get.size <- function(s) {
+  if (length(s)==1 && is.na(s)) {
+    0
+  } else {
+    length(s)
+  }
+}
+summary.plots.vector <- function(CLS, DCOR) {
   ENUM <- list()
-  for (i in 0:7) ENUM[[as.character(i)]] <- 0
+  for (i in 0:7) ENUM[[as.character(i)]] <- NA
   Z <- split(DCOR, CLS)
   for (n in names(Z)) ENUM[[n]] <- Z[[n]]
   names(ENUM) <- CLS.ENUM[match(names(ENUM), names(CLS.ENUM))]
-  boxplot(ENUM, col=GLYPH.COLS[1:8], main=paste0("dCOR per Class", upper.note))
-  barplot(sapply(ENUM,length), col=GLYPH.COLS[1:8], main=paste0("Boolean Class Frequency", upper.note))
-  hist(as.matrix(DCOR), main=paste0("Histogram of all-pairs dCOR", upper.note))
+  boxplot(ENUM, col=GLYPH.COLS[1:8], main="dCOR per Class", ylim=c(0,1))
+  barplot(sapply(ENUM,get.size), col=GLYPH.COLS[1:8], main="Boolean Class Frequency")
+  hist(as.matrix(DCOR), main="Histogram of all-pairs dCOR")
 }
 
 
