@@ -347,9 +347,19 @@ summary.plots.vector <- function(CLS, DCOR) {
   Z <- split(DCOR, CLS)
   for (n in names(Z)) ENUM[[n]] <- Z[[n]]
   names(ENUM) <- CLS.ENUM[match(names(ENUM), names(CLS.ENUM))]
-  boxplot(ENUM, col=GLYPH.COLS[1:8], main="dCOR per Class", ylim=c(0,1))
-  barplot(sapply(ENUM,get.size), col=GLYPH.COLS[1:8], main="Boolean Class Frequency")
-  hist(as.matrix(DCOR), main="Histogram of all-pairs dCOR")
+  if (length(DCOR) < 1000000) {
+    boxplot(ENUM, col=GLYPH.COLS[1:8], main="dCOR per Class", ylim=c(0,1))
+  } else {
+    ENUM.samp <- list()
+    qq <- sample.int(length(DCOR), size=1000000)
+    Z.samp <- split(DCOR[qq], CLS[qq])
+    for (n in names(Z.samp)) ENUM.samp[[n]] <- Z.samp[[n]]
+    names(ENUM.samp) <- CLS.ENUM[match(names(ENUM.samp), names(CLS.ENUM))]
+    boxplot(ENUM.samp, col=GLYPH.COLS[1:8], main="dCOR per Class (1e6 sample)", ylim=c(0,1))
+  }
+  sizes <- sapply(ENUM,get.size)
+  barplot(sizes, col=GLYPH.COLS[1:8], main="Boolean Class Frequency")
+  hist(as.matrix(DCOR), main="Histogram of all-pairs dCOR", xlim=c(0,1), breaks=0:10/10)
 }
 
 
