@@ -92,7 +92,7 @@ make.offsets <- function(breaks, N=15) {
   offsets
 }
 
-get.order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2, clust.meth="complete", CLS.enum.dist=F, DCOR.include.PCC=F) {
+get.order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2, clust.meth="complete", CLS.enum.dist=F, DCOR.include.PCC=F, sym=F) {
   R = list()
   if (CLS.enum.dist) {
     D.cls.r <- dist(CLS)
@@ -112,13 +112,20 @@ get.order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2, clust.meth="complete", 
   }
 
   Rowv <- rowMeans(DCOR, na.rm = TRUE)
-  Colv <- colMeans(DCOR, na.rm = TRUE)
   R$D.row <- D.DCOR.r*DCOR.weight+sqrt(D.cls.r)
-  R$D.col <- D.DCOR.c*DCOR.weight+sqrt(D.cls.c)
   R$Rhclust <- as.dendrogram(hclust(R$D.row, method=clust.meth))
   R$Rhclust <- reorder(R$Rhclust, Rowv)
-  R$Chclust <- as.dendrogram(hclust(R$D.col, method=clust.meth))
-  R$Chclust <- reorder(R$Chclust, Colv)
+
+  if (sym) {
+    Colv <- Rowv
+    R$D.col <- R$D.row
+    R$Chclust <- R$Rhclust
+  } else {
+    Colv <- colMeans(DCOR, na.rm = TRUE)
+    R$D.col <- D.DCOR.c*DCOR.weight+sqrt(D.cls.c)
+    R$Chclust <- as.dendrogram(hclust(R$D.col, method=clust.meth))
+    R$Chclust <- reorder(R$Chclust, Colv)
+  }
   R
 }
 
@@ -142,10 +149,10 @@ splom.cls <- function(CLS, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, ...) {
 }
 
 ## Draw DCOR scaled class enumerations.
-splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.1, MAX=0.8, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, draw.labs=T, clust.meth="complete", ...) {
+splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.1, MAX=0.8, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, draw.labs=T, clust.meth="complete", sym=F, ...) {
   ## Clustering
   if (reorder) {
-    R <- get.order.cls.dcor(CLS, DCOR, DCOR.weight, clust.meth=clust.meth)
+    R <- get.order.cls.dcor(CLS, DCOR, DCOR.weight, clust.meth=clust.meth, sym=sym)
     rowInd <- order.dendrogram(R$Rhclust)
     colInd <- order.dendrogram(R$Chclust)
     CLS <- CLS[rowInd, colInd]
