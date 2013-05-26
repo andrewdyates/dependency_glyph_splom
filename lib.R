@@ -96,19 +96,31 @@ get.order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2, clust.meth="complete", 
   R = list()
   if (CLS.enum.dist) {
     D.cls.r <- dist(CLS)
-    D.cls.c <- dist(t(CLS))
+    if (sym)
+      D.cls.c <- D.cls.r
+    else
+      D.cls.c <- dist(t(CLS))
   } else {
     D.cls.r <- gen.glyph.dist.m(CLS)
-    D.cls.c <- gen.glyph.dist.m(t(CLS))
+    if (sym)
+      D.cls.c <- D.cls.r
+    else
+      D.cls.c <- gen.glyph.dist.m(t(CLS))
     # max dist: 4*m
   }
   if (DCOR.include.PCC) {
     D.DCOR.r <- as.dist(1-cor(t(DCOR), method="pearson")) + dist(DCOR)
-    D.DCOR.c <- as.dist(1-cor(DCOR, method="pearson")) + dist(t(DCOR))
+    if (sym)
+      D.DCOR.c <- D.DCOR.r
+    else
+      D.DCOR.c <- as.dist(1-cor(DCOR, method="pearson")) + dist(t(DCOR))
   } else {
     D.DCOR.r <- dist(DCOR)
+    if (sym)
+      D.DCOR.c <- D.DCOR.r
+    else
+      D.DCOR.c <- dist(t(DCOR))
     # max dist: sqrt(m)
-    D.DCOR.c <- dist(t(DCOR))
   }
 
   Rowv <- rowMeans(DCOR, na.rm = TRUE)
