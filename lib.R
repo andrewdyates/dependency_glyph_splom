@@ -1,5 +1,6 @@
 library("RColorBrewer")
 library("gplots")
+#library("flashClust") # insufficient computational savings to justify dependency
 
 GRID.COL <-  "#ffffff"
 CLS.ENUM <- list("0"="NA", "1"="HIH", "2"="PC", "3"="LIL", "4"="UNL", "5"="HIL", "6"="NC", "7"="LIH", "8"="PAD")
@@ -482,6 +483,7 @@ glyph.dist.f <- function(A,B) {
 }
 
 # all-rows sum glyph hamming distance matrix
+# WARNING: THIS IS EXTREMELY SLOW
 gen.glyph.dist.m <- function(BC, recast.na.0=T) {
   if(recast.na.0)
     BC[BC==0] <- 8 # R indexes from 1, not 0, so remap 0 to 1+ the biggest glyph enum (8=7+1)
