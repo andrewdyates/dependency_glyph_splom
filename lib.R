@@ -486,6 +486,7 @@ glyph.dist.f <- function(A,B) {
 # all-rows sum glyph hamming distance matrix
 # WARNING: THIS IS EXTREMELY SLOW
 gen.glyph.dist.m <- function(BC, recast.na.0=T) {
+  if (class(BC) != "matrix") BC <- as.matrix(BC)
   if(recast.na.0)
     BC[BC==0] <- 8 # R indexes from 1, not 0, so remap 0 to 1+ the biggest glyph enum (8=7+1)
   n <- nrow(BC)
