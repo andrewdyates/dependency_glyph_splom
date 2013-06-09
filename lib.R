@@ -1,6 +1,7 @@
 library("RColorBrewer")
 library("gplots")
-#library("flashClust") # insufficient computational savings to justify dependency
+#library("flashClust")
+library("fastcluster")
 
 GRID.COL <-  "#ffffff"
 CLS.ENUM <- list("0"="NA", "1"="HIH", "2"="PC", "3"="LIL", "4"="UNL", "5"="HIL", "6"="NC", "7"="LIH", "8"="PAD")
@@ -93,7 +94,7 @@ make.offsets <- function(breaks, N=15) {
   offsets
 }
 
-get.order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2, clust.meth="complete", CLS.enum.dist=F, DCOR.include.PCC=F, sym=F) {
+get.order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2, clust.meth="average", CLS.enum.dist=F, DCOR.include.PCC=F, sym=F) {
   R = list()
   if (CLS.enum.dist) {
     D.cls.r <- dist(CLS)
@@ -162,7 +163,7 @@ splom.cls <- function(CLS, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, ...) {
 }
 
 ## Draw DCOR scaled class enumerations.
-splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.2, MAX=1, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, draw.labs=T, clust.meth="complete", sym=F, ...) {
+splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.2, MAX=1, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, draw.labs=T, clust.meth="average", sym=F, ...) {
   ## Clustering
   if (reorder) {
     R <- get.order.cls.dcor(CLS, DCOR, DCOR.weight, clust.meth=clust.meth, sym=sym)
@@ -269,7 +270,7 @@ heatmap.3 <- function(M, MIN=0.08, MAX=0.8, cols=brewer.pal(8,"RdYlBu"), reorder
 ## Cluster an enumerated boolean dependency class matrix.
 ## --------------------
 # Helper function to return class ordering as Row / Column dendrogram objs.
-get.cls.order <- function(CLS, clust.meth="complete") {
+get.cls.order <- function(CLS, clust.meth="average") {
   R = list()
   D.cls.r <- gen.glyph.dist.m(CLS)
   D.cls.c <- gen.glyph.dist.m(t(CLS))
