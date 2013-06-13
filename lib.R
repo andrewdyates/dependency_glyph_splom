@@ -196,7 +196,6 @@ splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15,
 
   # Row and column labels
   w <- ncol(R$G); h <- nrow(R$G)
-  sapply(1:(length(rownames(DCOR))*2), function(i) expand.names(i,rownames(DCOR)))
 
   if (asGlyphs) {
     labRow <- sapply(1:(length(rownames(DCOR))*2), function(i) expand.names(i,rev(rownames(DCOR))))
