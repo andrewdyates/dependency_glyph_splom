@@ -94,7 +94,7 @@ make.offsets <- function(breaks, N=15) {
   offsets
 }
 
-get.order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2, clust.meth="average", CLS.enum.dist=F, DCOR.include.PCC=F, sym=F) {
+get.order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2, clust.meth="average", CLS.enum.dist=F, DCOR.include.PCC=F, sym=F, col.cls.dist=NULL, row.cls.dist=NULL) {
   R = list()
   if (CLS.enum.dist) {
     D.cls.r <- dist(CLS)
@@ -103,11 +103,11 @@ get.order.cls.dcor <- function(CLS, DCOR, DCOR.weight=2, clust.meth="average", C
     else
       D.cls.c <- dist(t(CLS))
   } else {
-    D.cls.r <- gen.glyph.dist.m(CLS)
+    D.cls.r <- gen.glyph.dist.m(CLS, precomp=row.cls.dist)
     if (sym)
       D.cls.c <- D.cls.r
     else
-      D.cls.c <- gen.glyph.dist.m(t(CLS))
+      D.cls.c <- gen.glyph.dist.m(t(CLS), precomp=col.cls.dist)
     # max dist: 4*m
   }
   if (DCOR.include.PCC) {
@@ -163,10 +163,10 @@ splom.cls <- function(CLS, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, ...) {
 }
 
 ## Draw DCOR scaled class enumerations.
-splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.2, MAX=1, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, draw.labs=T, clust.meth="average", sym=F, ...) {
+splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.2, MAX=1, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, draw.labs=T, clust.meth="average", sym=F, row.cls.dist=NULL, col.cls.dist=NULL, ...) {
   ## Clustering
   if (reorder) {
-    R <- get.order.cls.dcor(CLS, DCOR, DCOR.weight, clust.meth=clust.meth, sym=sym)
+    R <- get.order.cls.dcor(CLS, DCOR, DCOR.weight, clust.meth=clust.meth, sym=sym, row.cls.dist=row.cls.dist, col.cls.dist=col.cls.dist)
     rowInd <- order.dendrogram(R$Rhclust)
     colInd <- order.dendrogram(R$Chclust)
     CLS <- CLS[rowInd, colInd]
@@ -484,12 +484,18 @@ glyph.dist.f <- function(A,B) {
 
 # all-rows sum glyph hamming distance matrix
 # WARNING: THIS IS EXTREMELY SLOW
-gen.glyph.dist.m <- function(BC, recast.na.0=T) {
-  if (class(BC) != "matrix") BC <- as.matrix(BC)
-  if(recast.na.0)
-    BC[BC==0] <- 8 # R indexes from 1, not 0, so remap 0 to 1+ the biggest glyph enum (8=7+1)
-  n <- nrow(BC)
-  as.dist(outer(1:n,1:n, FUN = Vectorize( function(i,j) glyph.dist.f(BC[i,],BC[j,]) )))
+gen.glyph.dist.m <- function(BC, recast.na.0=T, precomp=NULL) {
+  if(!is.null(precomp)) {
+    stopifnot(dim(precomp)[1]==dim(BC)[1])
+    stopifnot(dim(precomp)[2]==dim(BC)[1])
+    return precomp;
+  } else {
+    if (class(BC) != "matrix") BC <- as.matrix(BC)
+    if(recast.na.0)
+      BC[BC==0] <- 8 # R indexes from 1, not 0, so remap 0 to 1+ the biggest glyph enum (8=7+1)
+    n <- nrow(BC)
+    as.dist(outer(1:n,1:n, FUN = Vectorize( function(i,j) glyph.dist.f(BC[i,],BC[j,]) )))
+  }
 }
 
 
