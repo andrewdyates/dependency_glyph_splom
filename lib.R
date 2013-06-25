@@ -488,7 +488,7 @@ gen.glyph.dist.m <- function(BC, recast.na.0=T, precomp=NULL) {
   if(!is.null(precomp)) {
     stopifnot(dim(precomp)[1]==dim(BC)[1])
     stopifnot(dim(precomp)[2]==dim(BC)[1])
-    return precomp;
+    return(precomp);
   } else {
     if (class(BC) != "matrix") BC <- as.matrix(BC)
     if(recast.na.0)
@@ -638,8 +638,8 @@ collapse.cls <- function(CLS, idx, DCOR=NULL) {
       }
       R$CLS[i,j] <- r$cls
       R$COH[i,j] <- r$coh
-      R$MIX.SIGN[i,j] <- has.mix.sign(C)
-      R$MIX.DIR[i,j]  <- has.mix.direction(C)
+      R$MIX.SIGN[i,j] <- count.mix.sign(C)
+      R$MIX.DIR[i,j]  <- count.mix.pos.dir(C) + count.mix.neg.dir(C)
       if (i == j) {
         stopifnot(sum(iv)==sum(jv))
         R$SIZE[i,j] <- sum(iv)*(sum(iv)-1)/2
@@ -652,6 +652,15 @@ collapse.cls <- function(CLS, idx, DCOR=NULL) {
 }
 
 # count number of cross edges
+count.mix.sign <- function(CLS)
+  min(sum(c(1,2,3) %in% CLS), sum(c(5,6,7) %in% CLS))
+
+count.mix.pos.dir <- function(CLS)
+  min(sum(CLS==1), sum(CLS==3))
+
+count.mix.neg.dir <- function(CLS)
+  min(sum(CLS==5), sum(CLS==7))
+
 has.mix.sign <- function(CLS)
   any(c(1,2,3) %in% CLS) & any(c(5,6,7) %in% CLS)
 
@@ -687,7 +696,7 @@ get.coh.M.score <- function(COLLAPSED, min.dcor=0) {
   R$edge.xsign <- sum(COLLAPSED$MIX.SIGN[tri])
   R$edge.xdir <- sum(COLLAPSED$MIX.DIR[tri])
   R$edge.sum.flaws <- sum(COLLAPSED$MIX.SIGN[tri]) + sum(COLLAPSED$MIX.DIR[tri])
-  z <- COLLAPSED$MIX.SIGN[tri] | COLLAPSED$MIX.DIR[tri]
+  z <- (COLLAPSED$MIX.SIGN[tri]>0) | (COLLAPSED$MIX.DIR[tri]>0)
   R$edge.flaws <- sum(z)
   R$edge.all.n <- sum(all.tri)
   R$edge.n <- sum(tri)
@@ -697,9 +706,11 @@ get.coh.M.score <- function(COLLAPSED, min.dcor=0) {
 }
 
 # ignore contribution of edges below dCor threshold
-get.compression <- function(CLS, H, DCOR=NULL, min.dcor=0) {
-  #n <- round(dim(CLS)[1]/2)+2
-  n <- dim(CLS)[1]
+get.compression <- function(CLS, H, DCOR=NULL, min.dcor=0, max.k=NULL) {
+  if (is.null(max.k)) 
+    n <- round(dim(CLS)[1]/2)+2
+  else
+    n <- max.k
   R <- list()
   #R$clust.wavg <- rep(0,n)
   #R$edge.wavg <- rep(0,n)
@@ -726,10 +737,15 @@ get.compression <- function(CLS, H, DCOR=NULL, min.dcor=0) {
     if (!is.null(S$dcor.clust))
       R$dcor.clust[k] <- S$dcor.clust
     # REPORT
-    print(k)
-    print(S$tri.wavg)
-    print(S$edge.flaws / S$edge.all.n)
-    print(S$edge.flaws / S$edge.n)
+    cat("k: ", k, "\n")
+    cat("tri.wavg: ", S$tri.wavg, "\n")
+    cat("extant edge flaws: ",S$edge.flaws, "\n")
+    cat("sum edge flaws: ",S$edge.sum.flaws, "\n")
+    cat("edge.n: ", S$edge.n, "\n")
+    cat("edge.all.n: ", S$edge.all.n, "\n")
+    cat("S$edge.flaws / S$edge.all.n: ", S$edge.flaws / S$edge.all.n, "\n")
+    cat("S$edge.flaws / S$edge.n: ", S$edge.flaws / S$edge.n, "\n")
+    print("---")
   }
   R
 }
