@@ -211,18 +211,17 @@ splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15,
   if (draw.labs)
     par(mar = c(5, 0, 5, 5))
   image(1:w, 1:h, Img, xlab="", ylab="", col=R$COLOR.V, breaks=N.BREAKS, axes=FALSE, useRaster=useRaster, ...)
-  if (draw.labs) {
-    if (asGlyphs) {
-      axis(1, 1:(nc*2), labels = labCol, las = 2, line = -0.5, tick = 0, 
-           cex.axis = 0.7)
-      axis(4, 1:(nr*2), labels = labRow, las = 2, line = -0.5, tick = 0, 
-           cex.axis = 0.7)
-    } else {
-      axis(1, 1:nc, labels = labCol, las = 2, line = -0.5, tick = 0, 
-           cex.axis = 0.7)
-      axis(4, 1:nr, labels = labRow, las = 2, line = -0.5, tick = 0, 
-           cex.axis = 0.7)
-    }
+
+  if (asGlyphs) {
+    axis(1, 1:(nc*2), labels = labCol, las = 2, line = -0.5, tick = 0, 
+         cex.axis = 0.7)
+    axis(4, 1:(nr*2), labels = labRow, las = 2, line = -0.5, tick = 0, 
+         cex.axis = 0.7)
+  } else {
+    axis(1, 1:nc, labels = labCol, las = 2, line = -0.5, tick = 0, 
+         cex.axis = 0.7)
+    axis(4, 1:nr, labels = labRow, las = 2, line = -0.5, tick = 0, 
+         cex.axis = 0.7)
   }
   
   if (is.null(labRow)) 
@@ -613,11 +612,13 @@ collapse.cls <- function(CLS, idx, DCOR=NULL, dcor.sig=NULL) {
   R$COH <- matrix(0, nrow=n, ncol=n)
   R$MIX.SIGN <- matrix(0.0, nrow=n, ncol=n)
   R$MIX.DIR <- matrix(0.0, nrow=n, ncol=n)
+  R$LOSER.CLUST.EDGES <- rep(0,n)
   R$members <- split(rownames(CLS), idx)
   if (!is.null(DCOR)) {
     R$DCOR <- matrix(0, nrow=n, ncol=n)
     rownames(R$DCOR) <- 1:n
     colnames(R$DCOR) <- 1:n
+    R$DCOR.mid <- (dcor.sig*2 + 1)/3
   } else {
     R$DCOR <- NULL
   }
@@ -630,8 +631,15 @@ collapse.cls <- function(CLS, idx, DCOR=NULL, dcor.sig=NULL) {
       if (!is.null(DCOR) && !is.null(dcor.sig)) {
         C[DCOR[iv,jv]<dcor.sig] <- NA
       }
-      if (!is.null(DCOR))
+      if (!is.null(DCOR)) {
         R$DCOR[i,j] <- get.mean.dcor(DCOR[iv,jv], sym=i==j)
+        # if this is a cluster, does it contain a weakly-dependent or negative class "loser" feature?
+        if (i==j)
+          R$LOSER.CLUST.EDGES[i] <- sum((DCOR[iv,jv] < R$DCOR.mid & C!=2) | (C %in% c(5,6,7)) | DCOR[iv,jv] < dcor.sig) / 2
+      } else {
+        if (i==j)
+          R$LOSER.CLUST.EDGES[i] <- sum(C %in% c(5,6,7))
+      }
       if (!is.null(DCOR) && !is.null(dcor.sig) && R$DCOR[i,j] < dcor.sig) {
         R$MIX.SIGN[i,j] <- 0
         R$MIX.DIR[i,j]  <- 0
@@ -659,7 +667,7 @@ collapse.cls <- function(CLS, idx, DCOR=NULL, dcor.sig=NULL) {
   }
   # get matrix of "critical flaws"
   SUM.FLAWS <- R$MIX.SIGN + R$MIX.DIR
-  R$CRIT <- (log2(R.z83.sig$SIZE) <= SUM.FLAWS) & (SUM.FLAWS > 1)
+  R$CRIT <- (log2(R$SIZE) <= SUM.FLAWS) & (SUM.FLAWS > 1)
   R
 }
 
@@ -718,6 +726,7 @@ get.coh.M.score <- function(COLLAPSED, min.dcor=0) {
   R$edge.n <- sum(tri)
   R$clust.all.n <- sum(all.diag)
   R$clust.n <- sum(diag)
+  R$loser.clusters <- sum(COLLAPSED$LOSER.CLUST.EDGES>1)
   R
 }
 
@@ -841,3 +850,5 @@ weak.counts <- function(WEAK, sym=F) {
   }
   weak.counts
 }
+
+
