@@ -10,7 +10,7 @@
 # map.plot.rects(clust.coords.83, SOME.HIT.MATRIX)
 # dev.off()
 
-plot.rects <- function(zz, syms) {
+plot.rects <- function(zz, syms, color=rgb(0,0,0,0.4)) {
   n <- length(syms)
   for(i in 1:length(zz)) {
     print(paste("cluster",i,"size",length(zz[[i]])))
@@ -19,7 +19,7 @@ plot.rects <- function(zz, syms) {
     x1 <- max(select.i)
     y0 <- n-max(select.i)+1
     y1 <- n-min(select.i)+1
-    rect(x0,y0,x1,y1, col=rgb(0,0,0,0.4))
+    rect(x0,y0,x1,y1, col=color)
   }
 }
 clust.names.to.idx <- function(zz,syms) {
