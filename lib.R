@@ -211,18 +211,17 @@ splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15,
   if (draw.labs)
     par(mar = c(5, 0, 5, 5))
   image(1:w, 1:h, Img, xlab="", ylab="", col=R$COLOR.V, breaks=N.BREAKS, axes=FALSE, useRaster=useRaster, ...)
-  if (draw.labs) {
-    if (asGlyphs) {
-      axis(1, 1:(nc*2), labels = labCol, las = 2, line = -0.5, tick = 0, 
-           cex.axis = 0.7)
-      axis(4, 1:(nr*2), labels = labRow, las = 2, line = -0.5, tick = 0, 
-           cex.axis = 0.7)
-    } else {
-      axis(1, 1:nc, labels = labCol, las = 2, line = -0.5, tick = 0, 
-           cex.axis = 0.7)
-      axis(4, 1:nr, labels = labRow, las = 2, line = -0.5, tick = 0, 
-           cex.axis = 0.7)
-    }
+
+  if (asGlyphs) {
+    axis(1, 1:(nc*2), labels = labCol, las = 2, line = -0.5, tick = 0, 
+         cex.axis = 0.7)
+    axis(4, 1:(nr*2), labels = labRow, las = 2, line = -0.5, tick = 0, 
+         cex.axis = 0.7)
+  } else {
+    axis(1, 1:nc, labels = labCol, las = 2, line = -0.5, tick = 0, 
+         cex.axis = 0.7)
+    axis(4, 1:nr, labels = labRow, las = 2, line = -0.5, tick = 0, 
+         cex.axis = 0.7)
   }
   
   if (is.null(labRow)) 
@@ -518,8 +517,9 @@ get.cls.counts <- function(CLS, sym=T) {
   } else {
     C <- c(CLS)
   }
+  C <- na.omit(c(C))
   # indexed from 1. NA is index 8
-  if(any(CLS==0)) stop("Set NA CLS==0 to 8.")
+  if(any(C==0)) stop("Set NA CLS==0 to 8.")
   cls.counts <- sapply(c(1:8), function(i) sum(C==i))
   # account for arbitrary symmetry across diagonal for XiY and YiX classes
   if (sym) {
@@ -551,10 +551,8 @@ get.coh.vec <- function(CLS, sym=T) {
 choose.coh.cls <- function(coh.v, min.coh=0.74) {
   max.coh <- max(coh.v)
   max.coh.i <- coh.v == max.coh
-  #print(coh.v)
-  #print(max.coh.i)
-  # coherence below threshold. Return
   R <- list(); R$coh <- max.coh
+  # maximum coherence below threshold. Return UNL
   b <- max.coh < min.coh
   if (is.na(b)) {
     print(coh.v)
@@ -604,7 +602,7 @@ get.mean.dcor <- function(DCOR, sym=F) {
 }
 
 # Return collapsed class, coherence, and overall coherence by indices.
-collapse.cls <- function(CLS, idx, DCOR=NULL) {
+collapse.cls <- function(CLS, idx, DCOR=NULL, dcor.sig=NULL) {
   CLS[CLS==0] <- 8
   idx <- as.factor(idx)
   n <- length(levels(idx))
@@ -617,11 +615,13 @@ collapse.cls <- function(CLS, idx, DCOR=NULL) {
   R$COH <- matrix(0, nrow=n, ncol=n)
   R$MIX.SIGN <- matrix(0.0, nrow=n, ncol=n)
   R$MIX.DIR <- matrix(0.0, nrow=n, ncol=n)
+  R$LOSER.CLUST.EDGES <- rep(0,n)
   R$members <- split(rownames(CLS), idx)
   if (!is.null(DCOR)) {
     R$DCOR <- matrix(0, nrow=n, ncol=n)
     rownames(R$DCOR) <- 1:n
     colnames(R$DCOR) <- 1:n
+    R$DCOR.mid <- (dcor.sig*2 + 1)/3
   } else {
     R$DCOR <- NULL
   }
@@ -631,18 +631,35 @@ collapse.cls <- function(CLS, idx, DCOR=NULL) {
       iv <- idx == levels(idx)[i]
       jv <- idx == levels(idx)[j]
       C <- CLS[iv,jv]
-      if (!is.null(DCOR))
-        R$DCOR[i,j] <- get.mean.dcor(DCOR[iv,jv], sym=i==j)
-      r <- choose.coh.cls(get.coh.vec(C, sym=i==j))
-      if (is.null(r$cls)) {
-        print(C)
-        print(r)
-        stop("Null class.")
+      if (!is.null(DCOR) && !is.null(dcor.sig)) {
+        C[DCOR[iv,jv]<dcor.sig] <- NA
       }
-      R$CLS[i,j] <- r$cls
-      R$COH[i,j] <- r$coh
-      R$MIX.SIGN[i,j] <- count.mix.sign(C)
-      R$MIX.DIR[i,j]  <- count.mix.pos.dir(C) + count.mix.neg.dir(C)
+      if (!is.null(DCOR)) {
+        R$DCOR[i,j] <- get.mean.dcor(DCOR[iv,jv], sym=i==j)
+        # if this is a cluster, does it contain a weakly-dependent or negative class "loser" feature?
+        if (i==j)
+          R$LOSER.CLUST.EDGES[i] <- sum((DCOR[iv,jv] < R$DCOR.mid & C!=2) | (C %in% c(5,6,7)) | DCOR[iv,jv] < dcor.sig) / 2
+      } else {
+        if (i==j)
+          R$LOSER.CLUST.EDGES[i] <- sum(C %in% c(5,6,7))
+      }
+      if (!is.null(DCOR) && !is.null(dcor.sig) && R$DCOR[i,j] < dcor.sig) {
+        R$MIX.SIGN[i,j] <- 0
+        R$MIX.DIR[i,j]  <- 0
+        R$CLS[i,j] <- 4
+        R$COH[i,j] <- 1
+      } else {
+        r <- choose.coh.cls(get.coh.vec(C, sym=i==j))
+        if (is.null(r$cls)) {
+          print(C)
+          print(r)
+          stop("Null class.")
+        }
+        R$CLS[i,j] <- r$cls
+        R$COH[i,j] <- r$coh
+        R$MIX.SIGN[i,j] <- count.mix.sign(na.omit(c(C)))
+        R$MIX.DIR[i,j]  <- count.mix.pos.dir(na.omit(c(C))) + count.mix.neg.dir(na.omit(c(C)))
+      }
       if (i == j) {
         stopifnot(sum(iv)==sum(jv))
         R$SIZE[i,j] <- sum(iv)*(sum(iv)-1)/2
@@ -651,12 +668,15 @@ collapse.cls <- function(CLS, idx, DCOR=NULL) {
       }
     }
   }
+  # get matrix of "critical flaws"
+  SUM.FLAWS <- R$MIX.SIGN + R$MIX.DIR
+  R$CRIT <- (log2(R$SIZE) <= SUM.FLAWS) & (SUM.FLAWS > 1)
   R
 }
 
 # count number of cross edges
 count.mix.sign <- function(CLS)
-  min(sum(c(1,2,3) %in% CLS), sum(c(5,6,7) %in% CLS))
+  min(sum(CLS %in% c(1,2,3)), sum(CLS %in% c(5,6,7)))
 
 count.mix.pos.dir <- function(CLS)
   min(sum(CLS==1), sum(CLS==3))
@@ -689,22 +709,27 @@ get.coh.M.score <- function(COLLAPSED, min.dcor=0) {
     tri <- d & all.tri
     diag <- d & all.diag
     R$min.dcor <- min.dcor
-    R$num.dcor.clust <- sum(d)
+    R$num.dcor.clust <- sum(d) # significant edges 
   }
   R$all.wavg <- get.wavg.score(COLLAPSED$COH, COLLAPSED$SIZE)
   R$tri.wavg <- get.wavg.score(COLLAPSED$COH[tri], COLLAPSED$SIZE[tri])
   R$all.tri.wavg <- get.wavg.score(COLLAPSED$COH[all.tri], COLLAPSED$SIZE[all.tri])
   R$diag.wavg <- get.wavg.score(COLLAPSED$COH[diag], COLLAPSED$SIZE[diag])
   R$all.diag.wavg <- get.wavg.score(COLLAPSED$COH[all.diag], COLLAPSED$SIZE[all.diag])
-  R$edge.xsign <- sum(COLLAPSED$MIX.SIGN[tri])
-  R$edge.xdir <- sum(COLLAPSED$MIX.DIR[tri])
-  R$edge.sum.flaws <- sum(COLLAPSED$MIX.SIGN[tri]) + sum(COLLAPSED$MIX.DIR[tri])
+  R$sum.edge.xsign <- sum(COLLAPSED$MIX.SIGN[tri]) # sum total of sign flaws
+  R$sum.edge.xdir <- sum(COLLAPSED$MIX.DIR[tri]) # sum total of xdir flaws
+  R$sum.edge.flaws <- R$sum.edge.xsign + R$sum.edge.xdir
   z <- (COLLAPSED$MIX.SIGN[tri]>0) | (COLLAPSED$MIX.DIR[tri]>0)
   R$edge.flaws <- sum(z)
+  zz <- (COLLAPSED$MIX.SIGN[tri]>0)
+  R$edge.sign.flaws <- sum(zz)
+  zz <- (COLLAPSED$MIX.DIR[tri]>0)
+  R$edge.dir.flaws <- sum(zz)
   R$edge.all.n <- sum(all.tri)
   R$edge.n <- sum(tri)
   R$clust.all.n <- sum(all.diag)
   R$clust.n <- sum(diag)
+  R$loser.clusters <- sum(COLLAPSED$LOSER.CLUST.EDGES>1)
   R
 }
 
@@ -730,6 +755,7 @@ get.compression <- function(CLS, H, DCOR=NULL, min.dcor=0, max.k=NULL) {
     R$all.edge.wavg[k] <- S$all.tri.wavg
 
     R$edge.flaws[k] <- S$edge.flaws
+    R$edge.sign.flaws[k] <- S$edge.sign.flaws
     R$edge.sum.flaws[k] <- S$edge.sum.flaws
     R$edge.xsign[k] <- S$edge.xsign
     R$edge.xdir[k] <- S$edge.xdir
@@ -742,7 +768,8 @@ get.compression <- function(CLS, H, DCOR=NULL, min.dcor=0, max.k=NULL) {
     # REPORT
     cat("k: ", k, "\n")
     cat("tri.wavg: ", S$tri.wavg, "\n")
-    cat("extant edge flaws: ",S$edge.flaws, "\n")
+    cat("extant edge sign-only flaws: ",S$edge.sign.flaws, "\n")
+    cat("extant edge flaws: ",S$edge.flaws, "\n")    
     cat("sum edge flaws: ",S$edge.sum.flaws, "\n")
     cat("edge.n: ", S$edge.n, "\n")
     cat("edge.all.n: ", S$edge.all.n, "\n")
@@ -826,3 +853,5 @@ weak.counts <- function(WEAK, sym=F) {
   }
   weak.counts
 }
+
+
