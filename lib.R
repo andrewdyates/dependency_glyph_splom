@@ -379,6 +379,9 @@ summary.plots.vector <- function(CLS, DCOR) {
   }
   sizes <- sapply(ENUM,get.size)
   barplot(sizes, col=GLYPH.COLS[1:8], main="Boolean Class Frequency")
+  lg2.sizes <- log2(sizes)
+  lg2.sizes[lg2.sizes==-Inf]<-0
+  barplot(lg2.sizes, col=GLYPH.COLS[1:8], main="Boolean Class Frequency (log2 scale)")
   hist(as.matrix(DCOR), main="Histogram of all-pairs dCOR", xlim=c(0,1), breaks=0:10/10)
 }
 
