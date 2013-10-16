@@ -6,7 +6,8 @@ library("fastcluster")
 GRID.COL <-  "#ffffff"
 CLS.ENUM <- list("0"="NA", "1"="HIH", "2"="PC", "3"="LIL", "4"="UNL", "5"="HIL", "6"="NC", "7"="LIH", "8"="PAD")
 GLYPH.COLS <- c("#ffffff", "#40a185", "#2688bf", "#5b51a5", "#000000", "#a00d42", "#d7424c", "#eb6532", "#ffffff")
-GLYPH.COLS.MAX <- c("#ffffff", "#00b271", "#0089d9", "#3424b3", "#000000", "#a3033c", "#d82a36", "#eb5218", "#ffffff")
+#GLYPH.COLS.MAX <- c("#ffffff", "#00b271", "#0089d9", "#3424b3", "#000000", "#a3033c", "#d82a36", "#eb5218", "#ffffff")
+GLYPH.COLS.MAX <- c("#ffffff", "#00b271", "#0089d9", "#3424b3", "#000000", "#a40e78", "#d82a36", "#eb5918", "#ffffff")
 # ---------------
 # Re-enumerate glyph symbols to put ND in the center, 0 as bg
 # Input enumeration:
@@ -163,7 +164,7 @@ splom.cls <- function(CLS, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, ...) {
 }
 
 ## Draw DCOR scaled class enumerations.
-splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.2, MAX=1, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, draw.labs=T, clust.meth="average", sym=F, row.cls.dist=NULL, col.cls.dist=NULL, ...) {
+splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15, MIN=0.2, MAX=1, MOST=1, LEAST=0, DCOR.weight=2, useRaster=FALSE, high.sat=TRUE, draw.labs=T, clust.meth="average", sym=F, row.cls.dist=NULL, col.cls.dist=NULL, cex=0.7, ...) {
   ## Clustering
   if (reorder) {
     R <- get.order.cls.dcor(CLS, DCOR, DCOR.weight, clust.meth=clust.meth, sym=sym, row.cls.dist=row.cls.dist, col.cls.dist=col.cls.dist)
@@ -214,14 +215,14 @@ splom.dcor <- function(CLS, DCOR, reorder=TRUE, asGlyphs=FALSE, pad=FALSE, N=15,
 
   if (asGlyphs) {
     axis(1, 1:(nc*2), labels = labCol, las = 2, line = -0.5, tick = 0, 
-         cex.axis = 0.7)
+         cex.axis = cex)
     axis(4, 1:(nr*2), labels = labRow, las = 2, line = -0.5, tick = 0, 
-         cex.axis = 0.7)
+         cex.axis = cex)
   } else {
     axis(1, 1:nc, labels = labCol, las = 2, line = -0.5, tick = 0, 
-         cex.axis = 0.7)
+         cex.axis = cex)
     axis(4, 1:nr, labels = labRow, las = 2, line = -0.5, tick = 0, 
-         cex.axis = 0.7)
+         cex.axis = cex)
   }
   
   if (is.null(labRow)) 
@@ -411,9 +412,9 @@ draw.grid <- function(grid, w, h, grid.col=GRID.COL, lwd=1) {
     os <- grid-0.5
     if(grid==3) os<-os-0.5
     for(i in 0:(w/grid)+1)
-      abline(v=i*grid-os, untf=FALSE, col=grid.col, lwd=lwd)
+      abline(v=i*grid-os, untf=TRUE, col=grid.col, lwd=lwd)
     for(j in 0:(h/grid)+1)
-      abline(h=j*grid-os, untf=FALSE, col=grid.col, lwd=lwd)
+      abline(h=j*grid-os, untf=TRUE, col=grid.col, lwd=lwd)
   }
 }
 
